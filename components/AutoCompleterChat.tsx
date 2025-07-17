@@ -1,7 +1,6 @@
 import LlamaIcon from "@/assets/icons/llama_icon.svg";
 import { ColorPalette } from "@/constants/Colors";
 import { MODES } from "@/constants/Modes";
-import Clipboard from "@react-native-clipboard/clipboard";
 import { useIsFocused } from "@react-navigation/native";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -28,7 +27,6 @@ import Animated, {
   useAnimatedStyle,
   useDerivedValue,
 } from "react-native-reanimated";
-import Icon from "react-native-vector-icons/Ionicons";
 
 type LLMScreenWrapperProps = {
   mode: number;
@@ -148,41 +146,26 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
   ) : (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
-        <View style={styles.headerContainer}>
-          <View style={styles.headerIcon}>
-            <LlamaIcon width={24} height={24} fill={ColorPalette.primary} />
-          </View>
-          <Text style={styles.headerText}>
-            Let me help you with your writing
-          </Text>
-        </View>
         <View style={styles.bottomContainer}>
-          <View style={{ flexDirection: "row" }}>
+          <View style={styles.headerContainer}>
+            <View style={styles.headerIcon}>
+              <LlamaIcon width={24} height={24} fill={ColorPalette.primary} />
+            </View>
+            <Text style={styles.headerText}>
+              Let me help you with your writing
+            </Text>
+          </View>
+          <View style={{ flexDirection: "row", padding: 20 }}>
+            <Text style={styles.headerStyleText}>Writing style:</Text>
             <TouchableOpacity
-              style={[styles.headerModeText, { marginRight: 0.65 * width }]}
+              style={styles.headerModeText}
               onPress={changeMode}
             >
               <Text>{MODES[modeId].label}</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.copyButton}
-              onPress={() => {
-                if (userInput) {
-                  Clipboard.setString(userInput);
-                }
-              }}
-            >
-              <Icon
-                name="copy-outline"
-                size={20}
-                color={ColorPalette.primary}
-              />
-            </TouchableOpacity>
           </View>
           <View style={styles.textInputWrapper}>
-            <Animated.View
-              style={[styles.textInputContainer, textInputAnimatedStyle]}
-            >
+            <Animated.View style={styles.textInputContainer}>
               <TextInput
                 autoCorrect={false}
                 autoComplete={"off"}
@@ -207,10 +190,19 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
                 value={userInput}
               />
             </Animated.View>
-            <Text style={styles.autocompleteText}>
-              {userInput}
-              {showHint && <Text style={styles.hintText}> {llm.response}</Text>}
-            </Text>
+          </View>
+          <View style={styles.chatResponseContainer}>
+            <TouchableOpacity
+              style={styles.chatResponse}
+              onPress={acceptHint}
+              disabled={!llm.response}
+            >
+              {llm.response && showHint ? (
+                <Text style={{ color: "#fff" }}>{llm.response}</Text>
+              ) : (
+                <Text style={{ color: "#fff" }}>thinking...</Text>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
         <Animated.View style={[styles.keyboardContainer, hintAnimatedStyle]}>
@@ -235,7 +227,10 @@ const styles = StyleSheet.create({
     color: ColorPalette.primary,
     borderRadius: 20,
     borderWidth: 1,
-    padding: 10,
+    padding: 5,
+    height: 30,
+    marginRight: 200,
+    justifyContent: "center",
   },
   headerIcon: {
     backgroundColor: ColorPalette.seaBlueLight,
@@ -249,8 +244,7 @@ const styles = StyleSheet.create({
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 50,
-    marginTop: 50,
+    marginTop: 100,
   },
   bottomContainer: {
     height: "100%",
@@ -265,6 +259,14 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     textAlign: "center",
     color: ColorPalette.primary,
+  },
+  headerStyleText: {
+    fontFamily: "regular",
+    fontSize: 18,
+    lineHeight: 28,
+    textAlign: "center",
+    color: ColorPalette.primary,
+    marginRight: 10,
   },
   copyButton: {
     padding: 6,
@@ -286,9 +288,9 @@ const styles = StyleSheet.create({
   },
   textInputWrapper: {
     width: "100%",
-    flex: 1,
     alignItems: "center",
     marginTop: 20,
+    flexDirection: "column",
   },
   textInputContainer: {
     alignItems: "center",
@@ -296,18 +298,36 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   textInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 8,
+    // adjust size to multiline input up to maxHeight
+    borderRadius: 24,
     fontFamily: "regular",
-    fontSize: 14,
+    fontSize: 16,
     padding: 16,
-    maxHeight: 540,
-    minHeight: 100,
-    height: 540,
+    height: 200,
     width: "100%",
-    color: ColorPalette.primary,
-    backgroundColor: "transparent",
+    color: "#fff",
+    backgroundColor: ColorPalette.primary,
+  },
+  chatResponseContainer: {
+    padding: 20,
+    alignSelf: "flex-end",
+  },
+  responseAcceptButton: {
+    backgroundColor: ColorPalette.seaBlueDark,
+    height: 50,
+    width: 50,
+    borderRadius: 24,
+    marginHorizontal: 10,
+  },
+  chatResponse: {
+    // align container (not its content) to the right
+    borderRadius: 24,
+    fontFamily: "regular",
+    fontSize: 16,
+    padding: 16,
+    height: 50,
+    color: "#fff",
+    backgroundColor: ColorPalette.seaBlueDark,
   },
   keyboardContainer: {
     position: "absolute",
