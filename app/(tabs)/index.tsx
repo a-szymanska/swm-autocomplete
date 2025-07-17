@@ -7,7 +7,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 export default function App() {
   const [selectedMode, setSelectedMode] = useState<number | null>(null);
 
-  return selectedMode ? (
+  return selectedMode !== null ? (
     <LLMScreenWrapper mode={selectedMode} />
   ) : (
     <View style={styles.container}>

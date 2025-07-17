@@ -6,9 +6,8 @@ import { useIsFocused } from "@react-navigation/native";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActionSheetIOS,
+  Dimensions,
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -17,12 +16,18 @@ import {
   View,
 } from "react-native";
 import {
-  LLAMA3_2_1B,
+  LLAMA3_2_1B_QLORA,
   LLAMA3_2_TOKENIZER,
   LLAMA3_2_TOKENIZER_CONFIG,
   useLLM,
 } from "react-native-executorch";
 import Spinner from "react-native-loading-spinner-overlay";
+import Animated, {
+  runOnJS,
+  useAnimatedKeyboard,
+  useAnimatedStyle,
+  useDerivedValue,
+} from "react-native-reanimated";
 import Icon from "react-native-vector-icons/Ionicons";
 
 type LLMScreenWrapperProps = {
@@ -35,14 +40,36 @@ export default function LLMScreenWrapper({ mode }: LLMScreenWrapperProps) {
 }
 
 function LLMScreen({ mode }: LLMScreenWrapperProps) {
+  const { width } = Dimensions.get("window");
   const [isTextInputFocused, setIsTextInputFocused] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [userInput, setUserInput] = useState<string>("");
   const [showHint, setShowHint] = useState<boolean>(false);
   const [modeId, setModeId] = useState<number>(mode);
+  const keyboard = useAnimatedKeyboard();
+  const [keyboardHeight, setKeyboardHeight] = useState<number>(0);
+
+  useDerivedValue(() => {
+    runOnJS(setKeyboardHeight)(keyboard.height.value);
+  }, [keyboard.height]);
+
+  const textInputAnimatedStyle = useAnimatedStyle(() => {
+    const maxHeight = 540;
+    const height = maxHeight - keyboard.height.value;
+    return {
+      height: height,
+    };
+  });
+
+  const hintAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: -keyboard.height.value }],
+      opacity: keyboardHeight > 0 ? 1 : 0,
+    };
+  });
 
   const llm = useLLM({
-    modelSource: LLAMA3_2_1B,
+    modelSource: LLAMA3_2_1B_QLORA,
     tokenizerSource: LLAMA3_2_TOKENIZER,
     tokenizerConfigSource: LLAMA3_2_TOKENIZER_CONFIG,
   });
@@ -114,24 +141,19 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
     </View>
   ) : (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        collapsable={false}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 120 : 40}
-      >
-        <View style={styles.container}>
-          <View style={styles.headerContainer}>
-            <View style={styles.headerIcon}>
-              <LlamaIcon width={24} height={24} fill={ColorPalette.primary} />
-            </View>
-            <Text style={styles.headerText}>
-              Let me help you with your writing
-            </Text>
+      <View style={styles.container}>
+        <View style={styles.headerContainer}>
+          <View style={styles.headerIcon}>
+            <LlamaIcon width={24} height={24} fill={ColorPalette.primary} />
           </View>
-          <View style={styles.bottomContainer}>
+          <Text style={styles.headerText}>
+            Let me help you with your writing
+          </Text>
+        </View>
+        <View style={styles.bottomContainer}>
+          <View style={{ flexDirection: "row" }}>
             <TouchableOpacity
-              style={styles.headerModeText}
+              style={[styles.headerModeText, { marginRight: 0.65 * width }]}
               onPress={changeMode}
             >
               <Text>{MODES[modeId].label}</Text>
@@ -147,18 +169,22 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
               <Icon
                 name="copy-outline"
                 size={20}
-                color={ColorPalette.blueLight}
+                color={ColorPalette.primary}
               />
             </TouchableOpacity>
-            <View style={styles.textInputWrapper}>
-              <Text style={styles.autocompleteText}>
-                {userInput}
-                {showHint && (
-                  <Text style={styles.hintText}> {llm.response}</Text>
-                )}
-              </Text>
+          </View>
+          <View style={styles.textInputWrapper}>
+            <Text style={styles.autocompleteText}>
+              {userInput}
+              {showHint && <Text style={styles.hintText}> {llm.response}</Text>}
+            </Text>
+            <Animated.View
+              style={[styles.textInputContainer, textInputAnimatedStyle]}
+            >
               <TextInput
                 autoCorrect={false}
+                autoComplete={"off"}
+                keyboardType="ascii-capable"
                 onFocus={() => setIsTextInputFocused(true)}
                 onBlur={() => setIsTextInputFocused(false)}
                 style={[
@@ -183,37 +209,32 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
                 }}
                 value={userInput}
               />
-            </View>
+            </Animated.View>
           </View>
         </View>
-      </KeyboardAvoidingView>
+        <Animated.View style={[styles.keyboardContainer, hintAnimatedStyle]}>
+          <TouchableOpacity style={styles.keyboardBox}>
+            <Text>Some thoughtful hints</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
     </TouchableWithoutFeedback>
   );
 }
 
 const styles = StyleSheet.create({
-  keyboardAvoidingView: {
-    flex: 1,
-    paddingBottom: Platform.OS === "android" ? 20 : 0,
-  },
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignContent: "center",
     alignItems: "center",
+    flexDirection: "column",
   },
   headerModeText: {
-    flex: 1,
-    justifyContent: "center",
-    alignContent: "center",
-    alignItems: "center",
-    borderColor: ColorPalette.blueLight,
+    borderColor: ColorPalette.primary,
+    backgroundColor: ColorPalette.seaBlueLight,
+    color: ColorPalette.primary,
     borderRadius: 20,
     borderWidth: 1,
     padding: 10,
-    position: "absolute",
-    left: 20,
-    top: 70,
   },
   headerIcon: {
     backgroundColor: ColorPalette.seaBlueLight,
@@ -222,35 +243,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 16,
-    marginHorizontal: 7,
+    marginHorizontal: 10,
   },
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    position: "absolute",
-    top: 120,
-    gap: 8,
+    padding: 50,
+    marginTop: 50,
   },
   bottomContainer: {
-    height: 800,
+    height: "100%",
     width: "100%",
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: "column",
     alignItems: "center",
     paddingHorizontal: 16,
-    position: "absolute",
-    bottom: 0,
-  },
-  textInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 8,
-    fontFamily: "regular",
-    fontSize: 14,
-    color: ColorPalette.primary,
-    padding: 16,
-    maxHeight: 540,
-    backgroundColor: "transparent",
   },
   headerText: {
     fontFamily: "regular",
@@ -260,8 +266,15 @@ const styles = StyleSheet.create({
     color: ColorPalette.primary,
   },
   textInputWrapper: {
-    position: "relative",
+    width: "100%",
     flex: 1,
+    alignItems: "center",
+    marginTop: 20,
+  },
+  copyButton: {
+    padding: 6,
+    color: ColorPalette.blueLight,
+    borderRadius: 4,
   },
   autocompleteText: {
     position: "absolute",
@@ -276,12 +289,37 @@ const styles = StyleSheet.create({
   hintText: {
     color: ColorPalette.blueLight,
   },
-  copyButton: {
+  textInputContainer: {
+    alignItems: "center",
+    width: "100%",
+    backgroundColor: "transparent",
+  },
+  textInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 8,
+    fontFamily: "regular",
+    fontSize: 14,
+    color: ColorPalette.primary,
+    padding: 16,
+    maxHeight: 540,
+    minHeight: 100,
+    height: 540,
+    width: "100%",
+    backgroundColor: "transparent",
+  },
+  keyboardContainer: {
     position: "absolute",
-    right: 12,
-    top: 80,
-    padding: 6,
-    color: ColorPalette.blueLight,
-    borderRadius: 4,
+    alignItems: "center",
+    bottom: 0,
+    width: "100%",
+    backgroundColor: "#d1d6da",
+  },
+  keyboardBox: {
+    justifyContent: "center",
+    alignItems: "center",
+    height: 40,
+    width: "100%",
+    color: "red",
   },
 });
