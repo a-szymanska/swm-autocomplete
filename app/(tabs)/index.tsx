@@ -1,11 +1,11 @@
 import LLMScreenWrapper from "@/components/AutoCompleter";
 import { ColorPalette } from "@/constants/Colors";
+import { MODES } from "@/constants/Modes";
 import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-const MODES = ["casual", "formal", "academic"];
 
 export default function App() {
-  const [selectedMode, setSelectedMode] = useState<string | null>(null);
+  const [selectedMode, setSelectedMode] = useState<number | null>(null);
 
   return selectedMode ? (
     <LLMScreenWrapper mode={selectedMode} />
@@ -18,11 +18,11 @@ export default function App() {
       <View style={styles.choiceList}>
         {MODES.map((item) => (
           <TouchableOpacity
-            key={item}
+            key={item.id}
             style={styles.button}
-            onPress={() => setSelectedMode(item)}
+            onPress={() => setSelectedMode(item.id)}
           >
-            <Text style={styles.buttonText}>{item}</Text>
+            <Text style={styles.buttonText}>{item.label}</Text>
           </TouchableOpacity>
         ))}
       </View>

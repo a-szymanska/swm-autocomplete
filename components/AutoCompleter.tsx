@@ -1,9 +1,11 @@
 import LlamaIcon from "@/assets/icons/llama_icon.svg";
 import { ColorPalette } from "@/constants/Colors";
+import { MODES } from "@/constants/Modes";
 import Clipboard from "@react-native-clipboard/clipboard";
 import { useIsFocused } from "@react-navigation/native";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  ActionSheetIOS,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -24,7 +26,7 @@ import Spinner from "react-native-loading-spinner-overlay";
 import Icon from "react-native-vector-icons/Ionicons";
 
 type LLMScreenWrapperProps = {
-  mode: string;
+  mode: number;
 };
 
 export default function LLMScreenWrapper({ mode }: LLMScreenWrapperProps) {
@@ -34,16 +36,30 @@ export default function LLMScreenWrapper({ mode }: LLMScreenWrapperProps) {
 
 function LLMScreen({ mode }: LLMScreenWrapperProps) {
   const [isTextInputFocused, setIsTextInputFocused] = useState(false);
-  const textInputRef = useRef<TextInput>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [userInput, setUserInput] = useState<string>("");
   const [showHint, setShowHint] = useState<boolean>(false);
+  const [modeId, setModeId] = useState<number>(mode);
 
   const llm = useLLM({
     modelSource: LLAMA3_2_1B,
     tokenizerSource: LLAMA3_2_TOKENIZER,
     tokenizerConfigSource: LLAMA3_2_TOKENIZER_CONFIG,
   });
+
+  const changeMode = () =>
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        options: ["Cancel", ...MODES.map((item) => item.label)],
+        cancelButtonIndex: 0,
+        destructiveButtonIndex: modeId + 1,
+      },
+      (id) => {
+        if (id > 0) {
+          setModeId(id - 1);
+        }
+      }
+    );
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -67,7 +83,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
       try {
         await llm.generate([
           {
-            content: `You are an autocompleter - give answer of 1-5 words! Give only suffix to user input!! Do not repeat user input!! Style: ${mode}`,
+            content: `You are an autocompleter - give answer of 1-5 words! Give only suffix to user input!! Do not repeat user input!! Style: ${MODES[modeId].label}`,
             role: "system",
           },
           { content: userInput.trim(), role: "user" },
@@ -114,9 +130,12 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
             </Text>
           </View>
           <View style={styles.bottomContainer}>
-            <View style={styles.headerModeText}>
-              <Text>{mode}</Text>
-            </View>
+            <TouchableOpacity
+              style={styles.headerModeText}
+              onPress={changeMode}
+            >
+              <Text>{MODES[modeId].label}</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.copyButton}
               onPress={() => {
@@ -153,7 +172,6 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
                 placeholder="Start typing..."
                 placeholderTextColor={ColorPalette.blueLight}
                 multiline={true}
-                //ref={textInputRef}
                 onChangeText={(text: string) => {
                   const lastChar = text.slice(-1);
                   setUserInput(text);
