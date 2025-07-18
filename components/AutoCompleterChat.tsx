@@ -6,8 +6,6 @@ import Clipboard from "@react-native-clipboard/clipboard";
 import { useIsFocused } from "@react-navigation/native";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  ActionSheetIOS,
-  Dimensions,
   Keyboard,
   StyleSheet,
   Text,
@@ -17,7 +15,7 @@ import {
   View,
 } from "react-native";
 import {
-  LLAMA3_2_1B_QLORA,
+  LLAMA3_2_1B,
   LLAMA3_2_TOKENIZER,
   LLAMA3_2_TOKENIZER_CONFIG,
   useLLM,
@@ -30,6 +28,7 @@ import Animated, {
   useDerivedValue,
 } from "react-native-reanimated";
 import Icon from "react-native-vector-icons/Ionicons";
+import ModeActionSheet from "./ActionSheet";
 
 type LLMScreenWrapperProps = {
   mode: number;
@@ -41,14 +40,15 @@ export default function LLMScreenWrapper({ mode }: LLMScreenWrapperProps) {
 }
 
 function LLMScreen({ mode }: LLMScreenWrapperProps) {
-  const { width } = Dimensions.get("window");
-  const [isTextInputFocused, setIsTextInputFocused] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [userInput, setUserInput] = useState<string>("");
   const [showHint, setShowHint] = useState<boolean>(false);
   const [modeId, setModeId] = useState<number>(mode);
   const keyboard = useAnimatedKeyboard();
   const [keyboardHeight, setKeyboardHeight] = useState<number>(0);
+  const [showModeModal, setShowModeModal] = useState(false);
+
+  const changeMode = () => setShowModeModal(true);
 
   useDerivedValue(() => {
     runOnJS(setKeyboardHeight)(keyboard.height.value);
@@ -62,24 +62,24 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
   });
 
   const llm = useLLM({
-    modelSource: LLAMA3_2_1B_QLORA,
+    modelSource: LLAMA3_2_1B,
     tokenizerSource: LLAMA3_2_TOKENIZER,
     tokenizerConfigSource: LLAMA3_2_TOKENIZER_CONFIG,
   });
 
-  const changeMode = () =>
-    ActionSheetIOS.showActionSheetWithOptions(
-      {
-        options: ["Cancel", ...MODES.map((item) => item.label)],
-        cancelButtonIndex: 0,
-        destructiveButtonIndex: modeId + 1,
-      },
-      (id) => {
-        if (id > 0) {
-          setModeId(id - 1);
-        }
-      }
-    );
+  // const changeMode = () =>
+  //   ActionSheetIOS.showActionSheetWithOptions(
+  //     {
+  //       options: ["Cancel", ...MODES.map((item) => item.label)],
+  //       cancelButtonIndex: 0,
+  //       destructiveButtonIndex: modeId + 1,
+  //     },
+  //     (id) => {
+  //       if (id > 0) {
+  //         setModeId(id - 1);
+  //       }
+  //     }
+  //   );
 
   const acceptHint = () => {
     // console.log("Accept", llm.response);
@@ -103,7 +103,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
       clearTimeout(typingTimeoutRef.current);
     }
     typingTimeoutRef.current = setTimeout(async () => {
-      if (!userInput.trim()) return;
+      if (!userInput.trim() || !llm.isReady || llm.isGenerating) return;
       try {
         await llm.generate([
           {
@@ -114,7 +114,8 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
         ]);
         setShowHint(!!llm.response);
       } catch (error) {
-        // ("LLM error:", llm.error);
+        console.log("error:", error);
+        console.log("LLM error:", llm.error);
         setShowHint(false);
       }
     }, 1000);
@@ -162,8 +163,6 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
                 autoCorrect={false}
                 autoComplete={"off"}
                 keyboardType="ascii-capable"
-                onFocus={() => setIsTextInputFocused(true)}
-                onBlur={() => setIsTextInputFocused(false)}
                 style={styles.textInput}
                 placeholder="Start typing..."
                 placeholderTextColor={ColorPalette.blueLight}
@@ -221,6 +220,12 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
             <Text>{llm.response}</Text>
           </TouchableOpacity>
         </Animated.View>
+        <ModeActionSheet
+          visible={showModeModal}
+          onClose={() => setShowModeModal(false)}
+          onSelectMode={(id) => setModeId(id)}
+          selectedModeIndex={modeId}
+        />
       </View>
     </TouchableWithoutFeedback>
   );
