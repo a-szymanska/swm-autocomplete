@@ -54,14 +54,6 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
     runOnJS(setKeyboardHeight)(keyboard.height.value);
   }, [keyboard.height]);
 
-  const textInputAnimatedStyle = useAnimatedStyle(() => {
-    const maxHeight = 540;
-    const height = maxHeight - keyboard.height.value;
-    return {
-      height: height,
-    };
-  });
-
   const hintAnimatedStyle = useAnimatedStyle(() => {
     return {
       transform: [{ translateY: -keyboard.height.value }],
@@ -111,8 +103,6 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
       clearTimeout(typingTimeoutRef.current);
     }
     typingTimeoutRef.current = setTimeout(async () => {
-      // console.log("Pause in typing", userInput);
-      // Keyboard.dismiss();
       if (!userInput.trim()) return;
       try {
         await llm.generate([
@@ -123,7 +113,6 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
           { content: userInput.trim(), role: "user" },
         ]);
         setShowHint(!!llm.response);
-        // console.log("Hint:", llm.response);
       } catch (error) {
         // ("LLM error:", llm.error);
         setShowHint(false);
@@ -175,7 +164,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
                 keyboardType="ascii-capable"
                 onFocus={() => setIsTextInputFocused(true)}
                 onBlur={() => setIsTextInputFocused(false)}
-                style={[styles.textInput]}
+                style={styles.textInput}
                 placeholder="Start typing..."
                 placeholderTextColor={ColorPalette.blueLight}
                 multiline={true}
@@ -269,7 +258,6 @@ const styles = StyleSheet.create({
     marginTop: 100,
   },
   bottomContainer: {
-    height: "100%",
     width: "100%",
     flexDirection: "column",
     alignItems: "center",
@@ -329,7 +317,7 @@ const styles = StyleSheet.create({
     fontFamily: "regular",
     fontSize: 16,
     padding: 16,
-    height: 200,
+    maxHeight: 200,
     width: "90%",
     color: "#fff",
     alignSelf: "flex-start",
