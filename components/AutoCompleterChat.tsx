@@ -1,6 +1,8 @@
 import LlamaIcon from "@/assets/icons/llama_icon.svg";
+import AnimatedDots from "@/components/AnimatedDots";
 import { ColorPalette } from "@/constants/Colors";
 import { MODES } from "@/constants/Modes";
+import Clipboard from "@react-native-clipboard/clipboard";
 import { useIsFocused } from "@react-navigation/native";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -27,6 +29,7 @@ import Animated, {
   useAnimatedStyle,
   useDerivedValue,
 } from "react-native-reanimated";
+import Icon from "react-native-vector-icons/Ionicons";
 
 type LLMScreenWrapperProps = {
   mode: number;
@@ -172,14 +175,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
                 keyboardType="ascii-capable"
                 onFocus={() => setIsTextInputFocused(true)}
                 onBlur={() => setIsTextInputFocused(false)}
-                style={[
-                  styles.textInput,
-                  {
-                    borderColor: isTextInputFocused
-                      ? ColorPalette.blueDark
-                      : ColorPalette.blueLight,
-                  },
-                ]}
+                style={[styles.textInput]}
                 placeholder="Start typing..."
                 placeholderTextColor={ColorPalette.blueLight}
                 multiline={true}
@@ -189,18 +185,44 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
                 }}
                 value={userInput}
               />
+              <TouchableOpacity
+                style={styles.copyButton}
+                onPress={() => {
+                  if (userInput) {
+                    Clipboard.setString(userInput);
+                  }
+                }}
+              >
+                <Icon name="copy-outline" size={20} color={"#fff"} />
+              </TouchableOpacity>
             </Animated.View>
           </View>
           <View style={styles.chatResponseContainer}>
             <TouchableOpacity
-              style={styles.chatResponse}
+              style={[
+                styles.chatResponse,
+                {
+                  backgroundColor:
+                    llm.response && showHint
+                      ? ColorPalette.seaBlueDark
+                      : "#d1d6da",
+                },
+              ]}
               onPress={acceptHint}
               disabled={!llm.response}
             >
               {llm.response && showHint ? (
                 <Text style={{ color: "#fff" }}>{llm.response}</Text>
               ) : (
-                <Text style={{ color: "#fff" }}>thinking...</Text>
+                <View style={{ justifyContent: "center" }}>
+                  <AnimatedDots
+                    size={5}
+                    numberDots={3}
+                    jumpHeight={6}
+                    delay={250}
+                    color={"#fff"}
+                  />
+                </View>
               )}
             </TouchableOpacity>
           </View>
@@ -269,9 +291,12 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   copyButton: {
-    padding: 6,
+    padding: 15,
     color: ColorPalette.blueLight,
     borderRadius: 4,
+    position: "absolute",
+    top: 0,
+    right: 0,
   },
   autocompleteText: {
     position: "absolute",
@@ -295,39 +320,35 @@ const styles = StyleSheet.create({
   textInputContainer: {
     alignItems: "center",
     width: "100%",
-    backgroundColor: "transparent",
+    backgroundColor: ColorPalette.primary,
+    borderRadius: 24,
+    flexDirection: "row",
+    position: "relative",
   },
   textInput: {
-    // adjust size to multiline input up to maxHeight
-    borderRadius: 24,
     fontFamily: "regular",
     fontSize: 16,
     padding: 16,
     height: 200,
-    width: "100%",
+    width: "90%",
     color: "#fff",
-    backgroundColor: ColorPalette.primary,
+    alignSelf: "flex-start",
   },
   chatResponseContainer: {
-    padding: 20,
     alignSelf: "flex-end",
-  },
-  responseAcceptButton: {
-    backgroundColor: ColorPalette.seaBlueDark,
-    height: 50,
-    width: 50,
-    borderRadius: 24,
-    marginHorizontal: 10,
+    padding: 5,
+    marginTop: 10,
   },
   chatResponse: {
-    // align container (not its content) to the right
     borderRadius: 24,
     fontFamily: "regular",
     fontSize: 16,
-    padding: 16,
     height: 50,
+    minWidth: 100,
     color: "#fff",
-    backgroundColor: ColorPalette.seaBlueDark,
+    padding: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
   keyboardContainer: {
     position: "absolute",
