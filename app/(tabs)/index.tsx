@@ -70,3 +70,7 @@ const styles = StyleSheet.create({
     fontFamily: "regular",
   },
 });
+
+// TODO multiple suggestions
+// TODO evaluate on long press
+// TODO loading dots

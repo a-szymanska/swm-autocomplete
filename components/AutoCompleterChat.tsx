@@ -1,7 +1,7 @@
 import LlamaIcon from "@/assets/icons/llama_icon.svg";
-import AnimatedDots from "@/components/AnimatedDots";
 import { ColorPalette } from "@/constants/Colors";
 import { MODES } from "@/constants/Modes";
+import { systemPrompt } from "@/constants/Prompt";
 import Clipboard from "@react-native-clipboard/clipboard";
 import { useIsFocused } from "@react-navigation/native";
 import React, { useEffect, useRef, useState } from "react";
@@ -16,19 +16,15 @@ import {
 } from "react-native";
 import {
   LLAMA3_2_1B,
-  LLAMA3_2_TOKENIZER,
+  LLAMA3_2_1B_TOKENIZER,
   LLAMA3_2_TOKENIZER_CONFIG,
   useLLM,
 } from "react-native-executorch";
 import Spinner from "react-native-loading-spinner-overlay";
-import Animated, {
-  runOnJS,
-  useAnimatedKeyboard,
-  useAnimatedStyle,
-  useDerivedValue,
-} from "react-native-reanimated";
+import Animated from "react-native-reanimated";
 import Icon from "react-native-vector-icons/Ionicons";
 import ModeActionSheet from "./ActionSheet";
+import AnimatedDots from "./AnimatedDots";
 
 type LLMScreenWrapperProps = {
   mode: number;
@@ -42,49 +38,42 @@ export default function LLMScreenWrapper({ mode }: LLMScreenWrapperProps) {
 function LLMScreen({ mode }: LLMScreenWrapperProps) {
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [userInput, setUserInput] = useState<string>("");
-  const [showHint, setShowHint] = useState<boolean>(false);
   const [modeId, setModeId] = useState<number>(mode);
-  const keyboard = useAnimatedKeyboard();
-  const [keyboardHeight, setKeyboardHeight] = useState<number>(0);
   const [showModeModal, setShowModeModal] = useState(false);
+  const [responses, setResponses] = useState<string[]>([]);
+  const [generatedCount, setGeneratedCount] = useState<number>(0);
+  const [lastTypedAt, setLastTypedAt] = useState<number>(Date.now());
+  const generationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pauseIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [pauseSeconds, setPauseSeconds] = useState<number>(0);
 
   const changeMode = () => setShowModeModal(true);
 
-  useDerivedValue(() => {
-    runOnJS(setKeyboardHeight)(keyboard.height.value);
-  }, [keyboard.height]);
-
-  const hintAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateY: -keyboard.height.value }],
-      opacity: keyboardHeight > 0 ? 1 : 0,
-    };
-  });
-
   const llm = useLLM({
     modelSource: LLAMA3_2_1B,
-    tokenizerSource: LLAMA3_2_TOKENIZER,
+    tokenizerSource: LLAMA3_2_1B_TOKENIZER,
     tokenizerConfigSource: LLAMA3_2_TOKENIZER_CONFIG,
   });
 
-  // const changeMode = () =>
-  //   ActionSheetIOS.showActionSheetWithOptions(
-  //     {
-  //       options: ["Cancel", ...MODES.map((item) => item.label)],
-  //       cancelButtonIndex: 0,
-  //       destructiveButtonIndex: modeId + 1,
-  //     },
-  //     (id) => {
-  //       if (id > 0) {
-  //         setModeId(id - 1);
-  //       }
-  //     }
-  //   );
+  const generateResponse = async () => {
+    if (!userInput.trim() || !llm.isReady || llm.isGenerating) return;
 
-  const acceptHint = () => {
-    // console.log("Accept", llm.response);
-    setUserInput((prev) => prev.trim() + " " + llm.response);
-    setShowHint(false);
+    try {
+      console.log("Generating new response...");
+      await llm.generate([
+        {
+          role: "system",
+          content: systemPrompt({ mode: MODES[modeId].label }),
+        },
+        { role: "user", content: userInput.trim() },
+      ]);
+
+      if (llm.response && !responses.includes(llm.response)) {
+        setResponses((prev) => [...prev, llm.response]);
+      }
+    } catch (err) {
+      console.error("Generation error:", err);
+    }
   };
 
   useEffect(() => {
@@ -99,26 +88,15 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
 
   useEffect(() => {
     if (!userInput) return;
+
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
-    typingTimeoutRef.current = setTimeout(async () => {
-      if (!userInput.trim() || !llm.isReady || llm.isGenerating) return;
-      try {
-        await llm.generate([
-          {
-            content: `You are an autocompleter - give answer of 1-5 words! Give only suffix to user input!! Do not repeat user input!! Style: ${MODES[modeId].label}`,
-            role: "system",
-          },
-          { content: userInput.trim(), role: "user" },
-        ]);
-        setShowHint(!!llm.response);
-      } catch (error) {
-        console.log("error:", error);
-        console.log("LLM error:", llm.error);
-        setShowHint(false);
-      }
-    }, 1000);
+
+    typingTimeoutRef.current = setTimeout(() => {
+      setResponses([]);
+      generateResponse();
+    }, 500);
 
     return () => {
       if (typingTimeoutRef.current) {
@@ -126,6 +104,23 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
       }
     };
   }, [userInput]);
+
+  useEffect(() => {
+    if (responses.length >= 5) return;
+
+    if (generationIntervalRef.current) {
+      clearInterval(generationIntervalRef.current);
+    }
+
+    generationIntervalRef.current = setInterval(() => {
+      if (llm.isReady && !llm.isGenerating && userInput.trim()) {
+        generateResponse();
+      }
+    }, 1500);
+    return () => {
+      clearInterval(generationIntervalRef.current!);
+    };
+  }, [responses, llm.isGenerating, llm.isReady, userInput]);
 
   return !llm.isReady ? (
     <View style={styles.container}>
@@ -148,13 +143,22 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
               Let me help you with your writing
             </Text>
           </View>
-          <View style={{ flexDirection: "row", padding: 20 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              paddingVertical: 25,
+              paddingHorizontal: 10,
+              alignSelf: "flex-start",
+            }}
+          >
             <Text style={styles.headerStyleText}>Writing style:</Text>
             <TouchableOpacity
               style={styles.headerModeText}
               onPress={changeMode}
             >
-              <Text>{MODES[modeId].label}</Text>
+              <Text style={{ color: ColorPalette.primary }}>
+                {MODES[modeId].label}
+              </Text>
             </TouchableOpacity>
           </View>
           <View style={styles.textInputWrapper}>
@@ -168,8 +172,15 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
                 placeholderTextColor={ColorPalette.blueLight}
                 multiline={true}
                 onChangeText={(text: string) => {
-                  setUserInput(text);
-                  setShowHint(false);
+                  setUserInput(text); // TODO generate based on new input
+                  setResponses([]);
+                  setLastTypedAt(Date.now());
+                  setGeneratedCount(0);
+
+                  if (generationIntervalRef.current) {
+                    clearInterval(generationIntervalRef.current);
+                    generationIntervalRef.current = null;
+                  }
                 }}
                 value={userInput}
               />
@@ -186,40 +197,35 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
             </Animated.View>
           </View>
           <View style={styles.chatResponseContainer}>
-            <TouchableOpacity
-              style={[
-                styles.chatResponse,
-                {
-                  backgroundColor:
-                    llm.response && showHint
-                      ? ColorPalette.seaBlueDark
-                      : "#d1d6da",
-                },
-              ]}
-              onPress={acceptHint}
-              disabled={!llm.response}
-            >
-              {llm.response && showHint ? (
-                <Text style={{ color: "#fff" }}>{llm.response}</Text>
-              ) : (
-                <View style={{ justifyContent: "center" }}>
-                  <AnimatedDots
-                    size={5}
-                    numberDots={3}
-                    jumpHeight={6}
-                    delay={250}
-                    color={"#fff"}
-                  />
-                </View>
-              )}
-            </TouchableOpacity>
+            <View>
+              {responses.map((hint, _) => (
+                <TouchableOpacity
+                  style={[styles.chatResponse, styles.chatResponseReady]}
+                  onPress={() => {
+                    setUserInput((prev) => prev.trim() + " " + hint);
+                    setResponses([]);
+                  }}
+                  disabled={!responses.length}
+                >
+                  <Text style={{ color: "#fff" }}>{hint}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {responses.length < 5 && (
+              <View
+                style={[styles.chatResponse, styles.chatResponseGenerating]}
+              >
+                <AnimatedDots
+                  size={6}
+                  numberDots={3}
+                  jumpHeight={6}
+                  delay={320}
+                  color={"#fff"}
+                />
+              </View>
+            )}
           </View>
         </View>
-        <Animated.View style={[styles.keyboardContainer, hintAnimatedStyle]}>
-          <TouchableOpacity style={styles.keyboardBox} onPress={acceptHint}>
-            <Text>{llm.response}</Text>
-          </TouchableOpacity>
-        </Animated.View>
         <ModeActionSheet
           visible={showModeModal}
           onClose={() => setShowModeModal(false)}
@@ -238,14 +244,10 @@ const styles = StyleSheet.create({
     flexDirection: "column",
   },
   headerModeText: {
-    borderColor: ColorPalette.primary,
-    backgroundColor: ColorPalette.seaBlueLight,
+    backgroundColor: ColorPalette.seaBlueMedium,
     color: ColorPalette.primary,
     borderRadius: 20,
-    borderWidth: 1,
-    padding: 5,
-    height: 30,
-    marginRight: 200,
+    padding: 8,
     justifyContent: "center",
   },
   headerIcon: {
@@ -279,7 +281,6 @@ const styles = StyleSheet.create({
     fontFamily: "regular",
     fontSize: 18,
     lineHeight: 28,
-    textAlign: "center",
     color: ColorPalette.primary,
     marginRight: 10,
   },
@@ -291,24 +292,13 @@ const styles = StyleSheet.create({
     top: 0,
     right: 0,
   },
-  autocompleteText: {
-    position: "absolute",
-    top: 16,
-    left: 16,
-    right: 16,
-    fontFamily: "regular",
-    fontSize: 14,
-    color: "transparent",
-    backgroundColor: "transparent",
-  },
-  hintText: {
-    color: ColorPalette.seaBlueMedium,
-  },
   textInputWrapper: {
     width: "100%",
     alignItems: "center",
-    marginTop: 20,
+    paddingVertical: 20,
     flexDirection: "column",
+    borderTopWidth: 1,
+    borderTopColor: ColorPalette.seaBlueMedium,
   },
   textInputContainer: {
     alignItems: "center",
@@ -329,19 +319,26 @@ const styles = StyleSheet.create({
   },
   chatResponseContainer: {
     alignSelf: "flex-end",
-    padding: 5,
     marginTop: 10,
   },
   chatResponse: {
     borderRadius: 24,
-    fontFamily: "regular",
-    fontSize: 16,
     height: 50,
-    minWidth: 100,
-    color: "#fff",
-    padding: 10,
+    padding: 16,
+    marginVertical: 5,
     justifyContent: "center",
     alignItems: "center",
+    alignSelf: "flex-end",
+  },
+  chatResponseGenerating: {
+    backgroundColor: "#d1d6da",
+  },
+  chatResponseReady: {
+    fontFamily: "regular",
+    fontSize: 16,
+    minWidth: 100,
+    color: "#fff",
+    backgroundColor: ColorPalette.seaBlueDark,
   },
   keyboardContainer: {
     position: "absolute",
