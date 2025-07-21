@@ -41,13 +41,13 @@ const AnimatedDot = ({
         withTiming(
           jumpHeight,
           {
-            duration: duration,
-            easing: Easing.out(Easing.quad),
+            duration: duration * 1.2,
+            easing: Easing.out(Easing.linear),
           },
           () =>
             withTiming(0, {
               duration: duration,
-              easing: Easing.in(Easing.quad),
+              easing: Easing.in(Easing.ease),
             })
         ),
         -1,

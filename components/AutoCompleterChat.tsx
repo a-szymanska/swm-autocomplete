@@ -1,3 +1,5 @@
+// TODO remove repeated prefix
+
 import LlamaIcon from "@/assets/icons/llama_icon.svg";
 import { ColorPalette } from "@/constants/Colors";
 import { MODES } from "@/constants/Modes";
@@ -31,6 +33,7 @@ import Animated, {
 import Icon from "react-native-vector-icons/Ionicons";
 import ModeActionSheet from "./ActionSheet";
 import AnimatedDots from "./AnimatedDots";
+import AnimatedTouchableOpacity from "./AnimatedTouchableOpacity";
 
 type LLMScreenWrapperProps = {
   mode: number;
@@ -210,25 +213,15 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
           <View style={styles.chatResponseContainer}>
             <View style={{ alignItems: "flex-end" }}>
               {responses.map((hint, _) => (
-                // <AnimatedTouchableOpacity text={hint} />
-                <TouchableOpacity
-                  activeOpacity={1}
-                  style={[
-                    styles.chatResponse,
-                    styles.chatResponseReady,
-                    elaborateOnHint === hint && {
-                      borderWidth: 2,
-                      borderColor: "#fff",
-                    },
-                    { overflow: "hidden" },
-                  ]}
+                <AnimatedTouchableOpacity
+                  text={hint}
+                  animate={elaborateOnHint === hint}
                   disabled={!responses.length}
                   onPress={() => {
                     setUserInput((prev) => prev.trim() + " " + hint);
                     setResponses([]);
                   }}
                   onLongPress={async () => {
-                    console.log("Long press:", hint);
                     setElaborateOnHint(hint);
                     try {
                       while (llm.isGenerating) {
@@ -236,8 +229,10 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
                           setTimeout(resolve, 100)
                         );
                       }
+
                       const combinedInput = userInput.trim() + " " + hint;
                       await generateResponse(combinedInput);
+
                       const newHint = llm.response?.trim() || "";
                       if (newHint) {
                         setResponses((prevResponses) =>
@@ -247,26 +242,12 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
                         );
                       }
                     } catch (error) {
-                      console.error("Error on long press generation:", error);
+                      console.error("Error on long press:", error);
                     } finally {
                       setElaborateOnHint(null);
                     }
                   }}
-                >
-                  {elaborateOnHint === hint && (
-                    <AnimatedLinearGradient
-                      colors={[
-                        ColorPalette.seaBlueDark,
-                        ColorPalette.seaBlueMedium,
-                        ColorPalette.seaBlueDark,
-                      ]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={[StyleSheet.absoluteFill, animatedStyle]}
-                    />
-                  )}
-                  <Text style={{ color: "#fff", zIndex: 1 }}>{hint}</Text>
-                </TouchableOpacity>
+                />
               ))}
             </View>
             {responses.length < 3 && (
@@ -277,7 +258,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
                   size={6}
                   numberDots={3}
                   jumpHeight={6}
-                  delay={320}
+                  delay={400}
                   color={"#fff"}
                 />
               </View>
