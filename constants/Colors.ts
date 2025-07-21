@@ -30,6 +30,7 @@ export const ColorPalette = {
   seaBlueLight: "#E1F3FA",
   seaBlueMedium: "#B5E1F1",
   seaBlueDark: "#87CCE8",
+  seaBlueDarkest: "#70B4D0",
   blueLight: "#C1C6E5",
   blueDark: "#6676AA",
   strongPrimary: "#020F3C",

@@ -34,7 +34,7 @@ export function systemPrompt({ mode }: { mode: string }) {
         
         User input: In the kingdom of mobile apps,
         Style: fairytale
-        Output: React Native cast its spell
+        Output: React Native casts its spell
 
         User input: Once upon a time, developers dreamed of
         Style: fairytale
