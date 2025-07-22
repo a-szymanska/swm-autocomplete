@@ -3,11 +3,13 @@ import { StyleSheet, View } from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
-  withDelay,
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
+
+const PI2 = 2 * Math.PI;
 
 type AnimatedDotsProps = {
   size: number;
@@ -20,45 +22,33 @@ type AnimatedDotsProps = {
 type AnimatedDotProps = {
   size: number;
   jumpHeight: number;
-  delay: number;
-  duration: number;
   color: string;
+  phase: number;
+  clock: Animated.SharedValue<number>;
 };
 
 const AnimatedDot = ({
   size,
   jumpHeight,
-  delay,
-  duration,
   color,
+  phase,
+  clock,
 }: AnimatedDotProps) => {
-  const translateY = useSharedValue(0);
+  const sine = useDerivedValue(() => {
+    return Math.sin(clock.value * PI2 + phase);
+  });
 
-  useEffect(() => {
-    translateY.value = withDelay(
-      delay,
-      withRepeat(
-        withTiming(
-          jumpHeight,
-          {
-            duration: duration * 1.2,
-            easing: Easing.out(Easing.linear),
-          },
-          () =>
-            withTiming(0, {
-              duration: duration,
-              easing: Easing.in(Easing.ease),
-            })
-        ),
-        -1,
-        false
-      )
-    );
-  }, []);
+  const translateY = useDerivedValue(() => {
+    return sine.value * -jumpHeight;
+  });
+
+  const scale = useDerivedValue(() => {
+    return 1 + sine.value * 0.2;
+  });
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
-      transform: [{ translateY: translateY.value }],
+      transform: [{ translateY: translateY.value }, { scale: scale.value }],
     };
   });
 
@@ -84,18 +74,34 @@ export default function AnimatedDots({
   delay,
   color,
 }: AnimatedDotsProps) {
+  const clock = useSharedValue(0);
+
+  useEffect(() => {
+    clock.value = withRepeat(
+      withTiming(1, {
+        duration: delay * numberDots,
+        easing: Easing.linear,
+      }),
+      -1,
+      false
+    );
+  }, []);
+
   return (
     <View style={styles.container}>
-      {Array.from({ length: numberDots }).map((_, i) => (
-        <AnimatedDot
-          key={i}
-          size={size}
-          jumpHeight={jumpHeight}
-          delay={i * delay}
-          duration={delay * numberDots}
-          color={color}
-        />
-      ))}
+      {Array.from({ length: numberDots }).map((_, i) => {
+        const phaseShift = (i / numberDots) * PI2;
+        return (
+          <AnimatedDot
+            key={i}
+            size={size}
+            jumpHeight={jumpHeight}
+            color={color}
+            phase={phaseShift}
+            clock={clock}
+          />
+        );
+      })}
     </View>
   );
 }
@@ -107,6 +113,6 @@ const styles = StyleSheet.create({
     gap: 8,
     alignItems: "flex-end",
     justifyContent: "center",
-    padding: 20,
+    padding: 10,
   },
 });

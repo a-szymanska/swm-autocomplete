@@ -1,4 +1,6 @@
 // TODO remove repeated prefix
+// TODO why so slow?
+// TODO skip first 2s
 
 import LlamaIcon from "@/assets/icons/llama_icon.svg";
 import { ColorPalette } from "@/constants/Colors";
@@ -22,22 +24,18 @@ import {
   LLAMA3_2_TOKENIZER_CONFIG,
   useLLM,
 } from "react-native-executorch";
-import LinearGradient from "react-native-linear-gradient";
-import Spinner from "react-native-loading-spinner-overlay";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from "react-native-reanimated";
+import Animated from "react-native-reanimated";
 import Icon from "react-native-vector-icons/Ionicons";
 import ModeActionSheet from "./ActionSheet";
 import AnimatedDots from "./AnimatedDots";
 import AnimatedTouchableOpacity from "./AnimatedTouchableOpacity";
+import LoadingModel from "./LoadingModel";
 
 type LLMScreenWrapperProps = {
   mode: number;
 };
+
+const NUMBER_HINTS = 3;
 
 export default function LLMScreenWrapper({ mode }: LLMScreenWrapperProps) {
   const isFocused = useIsFocused();
@@ -47,24 +45,12 @@ export default function LLMScreenWrapper({ mode }: LLMScreenWrapperProps) {
 function LLMScreen({ mode }: LLMScreenWrapperProps) {
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const generationIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  const AnimatedLinearGradient =
-    Animated.createAnimatedComponent(LinearGradient);
-  const translateX = useSharedValue(0);
-
-  React.useEffect(() => {
-    translateX.value = withRepeat(withTiming(1, { duration: 3000 }), -1, false);
-  }, [translateX]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value * 100 }],
-  }));
+  const generatedHintRef = useRef<string | null>(null);
 
   const [userInput, setUserInput] = useState<string>("");
   const [modeId, setModeId] = useState<number>(mode);
   const [showModeModal, setShowModeModal] = useState(false);
   const [responses, setResponses] = useState<string[]>([]);
-  const [elaborateOnHint, setElaborateOnHint] = useState<string | null>(null);
 
   const changeMode = () => setShowModeModal(true);
 
@@ -74,9 +60,22 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
     tokenizerConfigSource: LLAMA3_2_TOKENIZER_CONFIG,
   });
 
-  const generateResponse = async (text: string) => {
-    text = text.trim();
-    if (!text || !llm.isReady || llm.isGenerating) return;
+  function cleanResponse(response: string) {
+    // console.log("Cleaning...");
+    // console.log("\t Before:", response);
+    const input = userInput;
+    let cleanResponse = response.trim();
+    if (!/[.?!]$/.test(input.trim())) {
+      cleanResponse = cleanResponse.toLowerCase();
+    }
+    // console.log("\t After:", cleanResponse);
+    return cleanResponse;
+  }
+
+  const generateResponse = async (input: string, hint: string = "") => {
+    input = input.trim();
+    if (!input || !llm.isReady || llm.isGenerating) return null;
+    console.log(`Generate hint for "${input}"`);
 
     try {
       await llm.generate([
@@ -84,35 +83,26 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
           role: "system",
           content: systemPrompt({ mode: MODES[modeId].label }),
         },
-        { role: "user", content: text },
+        { role: "user", content: input },
       ]);
-      return llm.response;
-    } catch (err) {
-      console.error("Generation error:", err);
+      return cleanResponse(llm.response);
+    } catch (error) {
+      console.error("Generation error:", error);
     }
   };
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (llm.isReady || llm.downloadProgress === 1) {
-        clearInterval(interval);
-      }
-    }, 500);
-    return () => clearInterval(interval);
-  }, [llm]);
-
-  useEffect(() => {
-    if (!userInput) return;
+    if (!userInput || generatedHintRef.current) return;
 
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
     typingTimeoutRef.current = setTimeout(async () => {
-      const response = await generateResponse(userInput);
+      const response = await generateResponse(userInput, "");
       if (response && !responses.includes(response)) {
         setResponses((prev) => [...prev, response]);
       }
-    }, 200);
+    }, 500);
 
     return () => {
       if (typingTimeoutRef.current) {
@@ -122,7 +112,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
   }, [userInput]);
 
   useEffect(() => {
-    if (responses.length >= 3 || elaborateOnHint) return;
+    if (responses.length >= NUMBER_HINTS || generatedHintRef.current) return;
 
     if (generationIntervalRef.current) {
       clearInterval(generationIntervalRef.current);
@@ -140,14 +130,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
   }, [responses, llm.isGenerating, llm.isReady, userInput]);
 
   return !llm.isReady ? (
-    <View style={styles.container}>
-      <Spinner
-        visible={!llm.isReady}
-        textContent={`Loading the model ${(llm.downloadProgress * 100).toFixed(
-          0
-        )} %`}
-      />
-    </View>
+    <LoadingModel model={llm} />
   ) : (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
@@ -189,8 +172,10 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
                 placeholderTextColor={ColorPalette.blueLight}
                 multiline={true}
                 onChangeText={(text: string) => {
+                  llm.interrupt();
                   setUserInput(text);
                   setResponses([]);
+                  generatedHintRef.current = null;
                   if (generationIntervalRef.current) {
                     clearInterval(generationIntervalRef.current);
                     generationIntervalRef.current = null;
@@ -215,50 +200,51 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
               {responses.map((hint, _) => (
                 <AnimatedTouchableOpacity
                   text={hint}
-                  animate={elaborateOnHint === hint}
-                  disabled={!responses.length}
+                  animate={generatedHintRef.current === hint}
                   onPress={() => {
                     setUserInput((prev) => prev.trim() + " " + hint);
                     setResponses([]);
                   }}
                   onLongPress={async () => {
-                    setElaborateOnHint(hint);
+                    if (responses.length < NUMBER_HINTS) return;
+                    generatedHintRef.current = hint;
+                    console.log(`Elaborate on "${generatedHintRef.current}"`);
                     try {
-                      while (llm.isGenerating) {
-                        await new Promise((resolve) =>
-                          setTimeout(resolve, 100)
-                        );
-                      }
-
-                      const combinedInput = userInput.trim() + " " + hint;
-                      await generateResponse(combinedInput);
-
-                      const newHint = llm.response?.trim() || "";
-                      if (newHint) {
+                      llm.interrupt();
+                      const response = await generateResponse(
+                        userInput.trim() + " " + hint,
+                        hint
+                      );
+                      console.log(
+                        `Generated "${
+                          userInput.trim() + " " + hint
+                        }" + "${response}"`
+                      );
+                      if (response) {
                         setResponses((prevResponses) =>
                           prevResponses.map((res) =>
-                            res === hint ? hint + " " + newHint : res
+                            res === hint ? hint + " " + response : res
                           )
                         );
                       }
                     } catch (error) {
                       console.error("Error on long press:", error);
                     } finally {
-                      setElaborateOnHint(null);
+                      generatedHintRef.current = null;
                     }
                   }}
                 />
               ))}
             </View>
-            {responses.length < 3 && (
+            {responses.length < NUMBER_HINTS && !generatedHintRef.current && (
               <View
                 style={[styles.chatResponse, styles.chatResponseGenerating]}
               >
                 <AnimatedDots
                   size={6}
                   numberDots={3}
-                  jumpHeight={6}
-                  delay={400}
+                  jumpHeight={4}
+                  delay={750}
                   color={"#fff"}
                 />
               </View>
@@ -362,7 +348,7 @@ const styles = StyleSheet.create({
   },
   chatResponse: {
     borderRadius: 24,
-    height: 50,
+    minHeight: 50,
     padding: 16,
     marginVertical: 5,
     justifyContent: "center",
@@ -371,6 +357,7 @@ const styles = StyleSheet.create({
   },
   chatResponseGenerating: {
     backgroundColor: "#d1d6da",
+    height: 50,
   },
   chatResponseReady: {
     fontFamily: "regular",

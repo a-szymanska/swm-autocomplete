@@ -20,17 +20,69 @@ export function systemPrompt({ mode }: { mode: string }) {
         Style: casual
         Assistant: reuse code across platforms
 
-        User input: You can access native modules using
-        Style: product documentation
-        Output: the NativeModules API from React
+        User input: React Native is a great tool because
+        Style: casual
+        Assistant: you write once and ship everywhere
+
+        User input: React Native is used for
+        Style: casual
+        Assistant: making mobile apps with JavaScript
+
+        User input: React Native is super helpful if
+        Style: casual
+        Assistant: you hate writing the same thing twice
+
+        User input: React Native is perfect when
+        Style: casual
+        Assistant: you want fast results
+
+        User input: React Native is awesome because
+        Style: casual
+        Assistant: it feels like building with Lego
+
+        User input: You don't need to write two separate codebases,
+        Style: casual
+        Assistant: which is a huge win
+
+        User input: With hot reloading,
+        Style: casual
+        Assistant: you see changes instantly
+
+        User input: React Native is a great tool because
+        Style: tutorial
+        Assistant: it enables cross-platform development
+
+        User input: React Native is used for
+        Style: tutorial
+        Assistant: building apps for iOS and Android
+
+        User input: React Native is a great choice when
+        Style: tutorial
+        Assistant: targeting multiple platforms efficiently
+
+        User input: React Native is popular because
+        Style: tutorial
+        Assistant: it uses JavaScript and React
+
+        User input: React Native is ideal for
+        Style: tutorial
+        Assistant: rapid mobile app prototyping
 
         User input: The main advantage of React Native is
         Style: tutorial
         Assistant: a shared codebase for both platforms
 
+        User input: Debugging in React Native is easier with
+        Style: tutorial
+        Assistant: tools like Flipper and Chrome DevTools
+
         User input: React Native is
         Style: documentation
         Assistant: an open-source UI software framework developed by Meta Platforms
+
+        User input: You can access native modules using
+        Style: documentation
+        Output: the NativeModules API from React
         
         User input: In the kingdom of mobile apps,
         Style: fairytale

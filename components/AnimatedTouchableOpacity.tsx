@@ -12,7 +12,7 @@ import Animated, {
 interface AnimatedTouchableOpacityProps {
   text: string;
   animate: boolean;
-  disabled: boolean;
+  disabled?: boolean;
   onPress: () => void;
   onLongPress: () => void;
 }
@@ -20,7 +20,7 @@ interface AnimatedTouchableOpacityProps {
 export default function AnimatedTouchableOpacity({
   text,
   animate,
-  disabled,
+  disabled = false,
   onPress,
   onLongPress,
 }: AnimatedTouchableOpacityProps) {
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
   },
   chatResponse: {
     borderRadius: 24,
-    height: 50,
+    minHeight: 50,
     padding: 16,
     marginVertical: 5,
     justifyContent: "center",
