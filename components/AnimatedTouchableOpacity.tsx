@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import LinearGradient from "react-native-linear-gradient";
+// import Animated from "react-native-reanimated";
 
 export type AnimatedTouchableOpacityProps = {
   backgroundColor?: string;
@@ -31,7 +32,6 @@ const MAX_WIDTH = SCREEN_WIDTH * 0.9;
 const AnimatedTouchableOpacity: React.FC<AnimatedTouchableOpacityProps> = ({
   backgroundColor = ColorPalette.seaBlueDark,
   color1 = ColorPalette.primary,
-  color2 = "rgb(239, 188, 254)",
   delay = 3000,
   text,
   animate,
@@ -68,7 +68,7 @@ const AnimatedTouchableOpacity: React.FC<AnimatedTouchableOpacityProps> = ({
     startAnimation();
 
     return () => {
-      animation?.stop(); // Cleanup
+      animation?.stop();
     };
   }, [text, delay]);
 
@@ -88,8 +88,8 @@ const AnimatedTouchableOpacity: React.FC<AnimatedTouchableOpacityProps> = ({
     inputRange: [0, 0.5, 0.75, 1],
     outputRange: [
       "rgb(135, 204, 232)",
-      "rgb(251, 188, 254)",
-      "rgb(218, 188, 254)",
+      "rgb(184, 161, 212)",
+      "rgb(209, 214, 218)",
       "rgb(135, 204, 232)",
     ],
   });

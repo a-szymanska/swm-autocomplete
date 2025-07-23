@@ -2,7 +2,7 @@ import LLMScreenWrapper from "@/components/AutoComplete";
 import { ColorPalette } from "@/constants/Colors";
 import { MODES } from "@/constants/Modes";
 import React, { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function App() {
   const [selectedMode, setSelectedMode] = useState<number | null>(null);
@@ -12,7 +12,10 @@ export default function App() {
   ) : (
     <View style={styles.container}>
       <View style={styles.helloMessageContainer}>
-        <Text style={styles.helloText}>Hello! 👋</Text>
+        <Image
+          source={require("@/assets/images/hand.png")}
+          style={styles.icon}
+        />
         <Text style={styles.bottomHelloText}>Choose your writing style</Text>
       </View>
       <View style={styles.choiceList}>
@@ -40,11 +43,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
     top: 50,
+    flexDirection: "row",
   },
   helloText: {
     fontFamily: "medium",
     fontSize: 30,
     color: ColorPalette.primary,
+  },
+  icon: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 10,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: ColorPalette.seaBlueLight,
   },
   bottomHelloText: {
     fontFamily: "regular",
@@ -62,7 +75,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 10,
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 20,
   },
   buttonText: {
     color: "#fff",

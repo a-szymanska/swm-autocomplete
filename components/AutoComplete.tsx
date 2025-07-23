@@ -25,11 +25,11 @@ import {
   useLLM,
 } from "react-native-executorch";
 import Animated from "react-native-reanimated";
-import Svg, { Path } from "react-native-svg";
 import Icon from "react-native-vector-icons/Ionicons";
 import ModeActionSheet from "./ActionSheet";
 import AnimatedDots from "./AnimatedDots";
 import AnimatedTouchableOpacity from "./AnimatedTouchableOpacity";
+import RunningLlama from "./Llama";
 import LoadingModel from "./LoadingModel";
 
 type LLMScreenWrapperProps = {
@@ -60,29 +60,6 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
     tokenizerSource: LLAMA3_2_1B_TOKENIZER,
     tokenizerConfigSource: LLAMA3_2_TOKENIZER_CONFIG,
   });
-  const amplitude = 5; // small height of waves
-  const wavelength = 15; // how long each wave is
-  const width = 300;
-  const height = 30;
-
-  const createPathForLlama = () => {
-    let path = `M 0 ${height / 2}`;
-    let x = 0;
-
-    while (x < width) {
-      const dx = wavelength;
-      const dy = Math.random() * amplitude * 2 - amplitude; // random vertical shift
-      const controlX = x + dx / 2;
-      const controlY = height / 2 + dy;
-      const endX = x + dx;
-      const endY = height / 2;
-
-      path += ` Q ${controlX} ${controlY}, ${endX} ${endY}`;
-      x += dx;
-    }
-
-    return path;
-  };
 
   function cleanResponse(response: string) {
     // console.log("Cleaning...");
@@ -162,7 +139,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
           <View style={styles.headerContainer}>
             <Image
               source={require("@/assets/images/llama_portrait.png")}
-              style={styles.llamaIcon}
+              style={styles.icon}
             />
             <Text style={styles.headerText}>
               Let me help you with your writing
@@ -276,19 +253,8 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
           </View>
         </View>
         {responses.length < NUMBER_HINTS && !generatedHintRef.current && (
-          <View style={{ position: "absolute", left: 0, bottom: 0 }}>
-            <Image
-              source={require("@/assets/images/llama.gif")}
-              style={styles.llama}
-            />
-            <Svg height="72" width="180">
-              <Path
-                d={createPathForLlama()}
-                fill="none"
-                stroke={ColorPalette.seaBlueMedium}
-                strokeWidth="1.5"
-              />
-            </Svg>
+          <View style={styles.llamaContainer}>
+            <RunningLlama />
           </View>
         )}
         <ModeActionSheet
@@ -315,7 +281,7 @@ const styles = StyleSheet.create({
     padding: 8,
     justifyContent: "center",
   },
-  llamaIcon: {
+  icon: {
     alignItems: "center",
     justifyContent: "center",
     marginHorizontal: 10,
@@ -344,7 +310,7 @@ const styles = StyleSheet.create({
   },
   headerStyleText: {
     fontFamily: "regular",
-    fontSize: 18,
+    fontSize: 16,
     lineHeight: 28,
     color: ColorPalette.primary,
     marginRight: 10,
@@ -406,12 +372,10 @@ const styles = StyleSheet.create({
     color: "#fff",
     backgroundColor: ColorPalette.seaBlueDark,
   },
-  llama: {
-    height: 110,
-    width: 160,
+  llamaContainer: {
     position: "absolute",
     left: 0,
-    bottom: 50,
+    bottom: 0,
   },
   keyboardContainer: {
     position: "absolute",
