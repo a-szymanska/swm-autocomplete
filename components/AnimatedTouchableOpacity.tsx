@@ -1,96 +1,167 @@
 import { ColorPalette } from "@/constants/Colors";
-import React from "react";
-import { StyleSheet, Text, TouchableOpacity } from "react-native";
-import LinearGradient from "react-native-linear-gradient";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from "react-native-reanimated";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Animated,
+  Dimensions,
+  Easing,
+  LayoutChangeEvent,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+} from "react-native";
 
-interface AnimatedTouchableOpacityProps {
+import LinearGradient from "react-native-linear-gradient";
+
+export type AnimatedTouchableOpacityProps = {
+  backgroundColor?: string;
+  color1?: string;
+  color2?: string;
+  delay?: number;
   text: string;
   animate: boolean;
   disabled?: boolean;
   onPress: () => void;
   onLongPress: () => void;
-}
+};
 
-export default function AnimatedTouchableOpacity({
+const TEXT_PADDING = 16;
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const MAX_WIDTH = SCREEN_WIDTH * 0.9;
+
+const AnimatedTouchableOpacity: React.FC<AnimatedTouchableOpacityProps> = ({
+  backgroundColor = ColorPalette.seaBlueDark,
+  color1 = ColorPalette.primary,
+  color2 = "rgb(239, 188, 254)",
+  delay = 3000,
   text,
   animate,
   disabled = false,
   onPress,
   onLongPress,
-}: AnimatedTouchableOpacityProps) {
-  const AnimatedLinearGradient =
-    Animated.createAnimatedComponent(LinearGradient);
-  const translateX = useSharedValue(0);
+}) => {
+  const animatedValue = useRef(new Animated.Value(0)).current;
+  const [textSize, setTextSize] = useState({ width: 0, height: 0 });
+  const prevTextRef = useRef<string | null>(null);
 
-  React.useEffect(() => {
-    translateX.value = withRepeat(withTiming(1, { duration: 3000 }), -1, false);
-  }, [translateX]);
+  const handleTextLayout = (event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    if (!animate && (width !== textSize.width || height !== textSize.height)) {
+      setTextSize({ width, height });
+    }
+  };
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value * 100 }],
-  }));
+  useEffect(() => {
+    let animation: Animated.CompositeAnimation;
+    const startAnimation = () => {
+      animatedValue.setValue(0);
+      animation = Animated.loop(
+        Animated.timing(animatedValue, {
+          toValue: 1,
+          duration: delay,
+          easing: Easing.quad,
+          useNativeDriver: true,
+        })
+      );
+      animation.start();
+    };
+
+    startAnimation();
+
+    return () => {
+      animation?.stop(); // Cleanup
+    };
+  }, [text, delay]);
+
+  useEffect(() => {
+    if (text !== prevTextRef.current) {
+      prevTextRef.current = text;
+      console.log(prevTextRef.current);
+    }
+  }, [text]);
+
+  const rotate = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["180deg", "540deg"],
+  });
+
+  const animatedBackgroundColor = animatedValue.interpolate({
+    inputRange: [0, 0.5, 0.75, 1],
+    outputRange: [
+      "rgb(135, 204, 232)",
+      "rgb(251, 188, 254)",
+      "rgb(218, 188, 254)",
+      "rgb(135, 204, 232)",
+    ],
+  });
 
   return (
     <TouchableOpacity
-      activeOpacity={1}
       style={[
-        styles.chatResponse,
-        styles.chatResponseReady,
-        animate && {
-          borderWidth: 2,
-          borderColor: "#fff",
+        styles.container,
+        {
+          width: textSize.width + 1,
+          height: textSize.height + 1,
+          backgroundColor,
         },
-        { overflow: "hidden" },
+        animate && { borderWidth: 2, borderColor: "#fff" },
       ]}
       disabled={disabled}
       onPress={onPress}
       onLongPress={onLongPress}
+      activeOpacity={0.8}
     >
       {animate && (
-        <AnimatedLinearGradient
-          colors={[
-            ColorPalette.seaBlueDark,
-            ColorPalette.seaBlueMedium,
-            ColorPalette.seaBlueDark,
-          ]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={[StyleSheet.absoluteFill, animatedStyle]}
-        />
+        <>
+          <Animated.View
+            style={[
+              {
+                position: "absolute",
+                width: textSize.width * 1.5,
+                height: textSize.width * 1.5,
+                justifyContent: "center",
+                alignItems: "center",
+                backgroundColor: animatedBackgroundColor,
+                transform: [{ rotate }],
+              },
+            ]}
+          >
+            <LinearGradient
+              colors={[`${color1}20`, `${color1}20`, `${color1}80`, color1]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                width: "100%",
+                height: "100%",
+                borderRadius: textSize.width / 2,
+              }}
+            />
+          </Animated.View>
+        </>
       )}
-      <Text style={{ color: "#fff", zIndex: 1 }}>{text}</Text>
+      <Text onLayout={handleTextLayout} style={styles.text}>
+        {text}
+      </Text>
     </TouchableOpacity>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  chatResponseContainer: {
-    alignSelf: "flex-end",
-    marginTop: 10,
-  },
-  chatResponse: {
-    borderRadius: 24,
-    minHeight: 50,
-    padding: 16,
-    marginVertical: 5,
+  container: {
     justifyContent: "center",
     alignItems: "center",
-    alignSelf: "flex-end",
+    overflow: "hidden",
+    borderRadius: 24,
+    marginBottom: 10,
   },
-  chatResponseGenerating: {
-    backgroundColor: "#d1d6da",
+  animatedView: {
+    position: "absolute",
   },
-  chatResponseReady: {
-    fontFamily: "regular",
-    fontSize: 16,
-    minWidth: 100,
+  text: {
     color: "#fff",
-    backgroundColor: ColorPalette.seaBlueDark,
+    fontSize: 16,
+    padding: TEXT_PADDING,
+    maxWidth: MAX_WIDTH - TEXT_PADDING,
   },
 });
+
+export default AnimatedTouchableOpacity;

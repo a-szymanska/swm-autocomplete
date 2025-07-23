@@ -2,7 +2,6 @@
 // TODO why so slow?
 // TODO skip first 2s
 
-import LlamaIcon from "@/assets/icons/llama_icon.svg";
 import { ColorPalette } from "@/constants/Colors";
 import { MODES } from "@/constants/Modes";
 import { systemPrompt } from "@/constants/Prompt";
@@ -10,6 +9,7 @@ import Clipboard from "@react-native-clipboard/clipboard";
 import { useIsFocused } from "@react-navigation/native";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Image,
   Keyboard,
   StyleSheet,
   Text,
@@ -25,6 +25,7 @@ import {
   useLLM,
 } from "react-native-executorch";
 import Animated from "react-native-reanimated";
+import Svg, { Path } from "react-native-svg";
 import Icon from "react-native-vector-icons/Ionicons";
 import ModeActionSheet from "./ActionSheet";
 import AnimatedDots from "./AnimatedDots";
@@ -35,7 +36,7 @@ type LLMScreenWrapperProps = {
   mode: number;
 };
 
-const NUMBER_HINTS = 3;
+const NUMBER_HINTS = 2;
 
 export default function LLMScreenWrapper({ mode }: LLMScreenWrapperProps) {
   const isFocused = useIsFocused();
@@ -59,6 +60,29 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
     tokenizerSource: LLAMA3_2_1B_TOKENIZER,
     tokenizerConfigSource: LLAMA3_2_TOKENIZER_CONFIG,
   });
+  const amplitude = 5; // small height of waves
+  const wavelength = 15; // how long each wave is
+  const width = 300;
+  const height = 30;
+
+  const createPathForLlama = () => {
+    let path = `M 0 ${height / 2}`;
+    let x = 0;
+
+    while (x < width) {
+      const dx = wavelength;
+      const dy = Math.random() * amplitude * 2 - amplitude; // random vertical shift
+      const controlX = x + dx / 2;
+      const controlY = height / 2 + dy;
+      const endX = x + dx;
+      const endY = height / 2;
+
+      path += ` Q ${controlX} ${controlY}, ${endX} ${endY}`;
+      x += dx;
+    }
+
+    return path;
+  };
 
   function cleanResponse(response: string) {
     // console.log("Cleaning...");
@@ -72,7 +96,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
     return cleanResponse;
   }
 
-  const generateResponse = async (input: string, hint: string = "") => {
+  const generateResponse = async (input: string) => {
     input = input.trim();
     if (!input || !llm.isReady || llm.isGenerating) return null;
     console.log(`Generate hint for "${input}"`);
@@ -98,7 +122,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
       clearTimeout(typingTimeoutRef.current);
     }
     typingTimeoutRef.current = setTimeout(async () => {
-      const response = await generateResponse(userInput, "");
+      const response = await generateResponse(userInput);
       if (response && !responses.includes(response)) {
         setResponses((prev) => [...prev, response]);
       }
@@ -136,9 +160,10 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
       <View style={styles.container}>
         <View style={styles.bottomContainer}>
           <View style={styles.headerContainer}>
-            <View style={styles.headerIcon}>
-              <LlamaIcon width={24} height={24} fill={ColorPalette.primary} />
-            </View>
+            <Image
+              source={require("@/assets/images/llama_portrait.png")}
+              style={styles.llamaIcon}
+            />
             <Text style={styles.headerText}>
               Let me help you with your writing
             </Text>
@@ -212,8 +237,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
                     try {
                       llm.interrupt();
                       const response = await generateResponse(
-                        userInput.trim() + " " + hint,
-                        hint
+                        userInput.trim() + " " + hint
                       );
                       console.log(
                         `Generated "${
@@ -251,6 +275,22 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
             )}
           </View>
         </View>
+        {responses.length < NUMBER_HINTS && !generatedHintRef.current && (
+          <View style={{ position: "absolute", left: 0, bottom: 0 }}>
+            <Image
+              source={require("@/assets/images/llama.gif")}
+              style={styles.llama}
+            />
+            <Svg height="72" width="180">
+              <Path
+                d={createPathForLlama()}
+                fill="none"
+                stroke={ColorPalette.seaBlueMedium}
+                strokeWidth="1.5"
+              />
+            </Svg>
+          </View>
+        )}
         <ModeActionSheet
           visible={showModeModal}
           onClose={() => setShowModeModal(false)}
@@ -275,14 +315,14 @@ const styles = StyleSheet.create({
     padding: 8,
     justifyContent: "center",
   },
-  headerIcon: {
-    backgroundColor: ColorPalette.seaBlueLight,
-    height: 32,
-    width: 32,
+  llamaIcon: {
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 16,
     marginHorizontal: 10,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: ColorPalette.seaBlueLight,
   },
   headerContainer: {
     flexDirection: "row",
@@ -365,6 +405,13 @@ const styles = StyleSheet.create({
     minWidth: 100,
     color: "#fff",
     backgroundColor: ColorPalette.seaBlueDark,
+  },
+  llama: {
+    height: 110,
+    width: 160,
+    position: "absolute",
+    left: 0,
+    bottom: 50,
   },
   keyboardContainer: {
     position: "absolute",

@@ -1,4 +1,4 @@
-import LLMScreenWrapper from "@/components/AutoCompleterChat";
+import LLMScreenWrapper from "@/components/AutoComplete";
 import { ColorPalette } from "@/constants/Colors";
 import { MODES } from "@/constants/Modes";
 import React, { useState } from "react";
