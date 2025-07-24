@@ -89,7 +89,7 @@ const AnimatedTouchableOpacity: React.FC<AnimatedTouchableOpacityProps> = ({
     outputRange: [
       "rgb(135, 204, 232)",
       "rgb(184, 161, 212)",
-      "rgb(209, 214, 218)",
+      "rgb(187, 189, 192)",
       "rgb(135, 204, 232)",
     ],
   });

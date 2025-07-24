@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     backgroundColor: ColorPalette.seaBlueLight,
   },
   bottomHelloText: {
-    fontFamily: "regular",
+    fontFamily: "Nunito",
     fontSize: 20,
     lineHeight: 28,
     textAlign: "center",
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#fff",
-    fontSize: 18,
-    fontFamily: "regular",
+    fontSize: 16,
+    fontFamily: "Nunito",
   },
 });

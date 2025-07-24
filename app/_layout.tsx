@@ -14,11 +14,7 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require("@/assets/fonts/SpaceMono-Regular.ttf"),
-    GamjaFlower: require("@/assets/fonts/GamjaFlower.ttf"),
-    KleeOne: require("@/assets/fonts/KleeOne.ttf"),
-    PlaywriteRegular: require("@/assets/fonts/PlaywriteDEGrund-Regular.ttf"),
-    PlaywriteLight: require("@/assets/fonts/PlaywriteDEGrund-Light.ttf"),
-    PlaywriteVariable: require("@/assets/fonts/PlaywriteDEGrund-Variable.ttf"),
+    Nunito: require("@/assets/fonts/Nunito.ttf"),
   });
 
   if (!loaded) {

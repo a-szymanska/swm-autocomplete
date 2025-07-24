@@ -1,6 +1,8 @@
-// TODO remove repeated prefix
-// TODO why so slow?
-// TODO skip first 2s
+// TODO podpowiedzi na klawiaturze
+// TODO generowanie w pętli??
+// TODO rozwijanie do 2 zdan
+// TODO potestować modele
+// TODO prompt
 
 import { ColorPalette } from "@/constants/Colors";
 import { MODES } from "@/constants/Modes";
@@ -24,12 +26,13 @@ import {
   LLAMA3_2_TOKENIZER_CONFIG,
   useLLM,
 } from "react-native-executorch";
-import Animated from "react-native-reanimated";
-import Icon from "react-native-vector-icons/Ionicons";
+import Animated, {
+  useAnimatedKeyboard,
+  useAnimatedStyle,
+} from "react-native-reanimated";
 import ModeActionSheet from "./ActionSheet";
-import AnimatedDots from "./AnimatedDots";
-import AnimatedTouchableOpacity from "./AnimatedTouchableOpacity";
-import RunningLlama from "./Llama";
+import CopyButton from "./CopyButton";
+import KeyboardTouchableOpacity from "./KeyboardTouchableOpacity";
 import LoadingModel from "./LoadingModel";
 
 type LLMScreenWrapperProps = {
@@ -44,16 +47,24 @@ export default function LLMScreenWrapper({ mode }: LLMScreenWrapperProps) {
 }
 
 function LLMScreen({ mode }: LLMScreenWrapperProps) {
-  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const generationIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const generatedHintRef = useRef<string | null>(null);
+  const selectedHintRef = useRef<string | null>(null);
 
   const [userInput, setUserInput] = useState<string>("");
   const [modeId, setModeId] = useState<number>(mode);
-  const [showModeModal, setShowModeModal] = useState(false);
   const [responses, setResponses] = useState<string[]>([]);
 
+  const [showModeModal, setShowModeModal] = useState(false);
   const changeMode = () => setShowModeModal(true);
+
+  const keyboard = useAnimatedKeyboard();
+  const textInputAnimatedStyle = useAnimatedStyle(() => {
+    const maxHeight = 600;
+    const height = maxHeight - keyboard.height.value;
+    return {
+      height: height,
+    };
+  });
 
   const llm = useLLM({
     modelSource: LLAMA3_2_1B,
@@ -62,15 +73,37 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
   });
 
   function cleanResponse(response: string) {
-    // console.log("Cleaning...");
-    // console.log("\t Before:", response);
-    const input = userInput;
-    let cleanResponse = response.trim();
-    if (!/[.?!]$/.test(input.trim())) {
-      cleanResponse = cleanResponse.toLowerCase();
+    console.log("\tBefore:", response);
+
+    const input = userInput.trim().toLowerCase();
+    let clean = response.trim();
+
+    if (!/[.?!]$/.test(input)) {
+      clean = clean.toLowerCase();
     }
-    // console.log("\t After:", cleanResponse);
-    return cleanResponse;
+
+    const inputWords = input.split(/\s+/);
+    const responseWords = clean.split(/\s+/);
+
+    let overlapIndex = 0;
+    let matchedPhrase = "";
+
+    for (let i = 0; i < responseWords.length; i++) {
+      const phrase = responseWords.slice(0, i + 1).join(" ");
+      if (input.endsWith(phrase)) {
+        overlapIndex = i + 1;
+        matchedPhrase = phrase;
+      }
+    }
+
+    console.log("\tMatched:", matchedPhrase);
+
+    const trimmedResponseWords = responseWords.slice(overlapIndex);
+    const finalWords = trimmedResponseWords.slice(0, 3);
+    const finalResponse = finalWords.join(" ");
+
+    console.log("\tAfter:", finalResponse);
+    return finalResponse;
   }
 
   const generateResponse = async (input: string) => {
@@ -86,6 +119,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
         },
         { role: "user", content: input },
       ]);
+      console.log(`Hint for "${input}": "${llm.response}"`);
       return cleanResponse(llm.response);
     } catch (error) {
       console.error("Generation error:", error);
@@ -93,27 +127,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
   };
 
   useEffect(() => {
-    if (!userInput || generatedHintRef.current) return;
-
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-    typingTimeoutRef.current = setTimeout(async () => {
-      const response = await generateResponse(userInput);
-      if (response && !responses.includes(response)) {
-        setResponses((prev) => [...prev, response]);
-      }
-    }, 500);
-
-    return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-    };
-  }, [userInput]);
-
-  useEffect(() => {
-    if (responses.length >= NUMBER_HINTS || generatedHintRef.current) return;
+    if (!userInput || responses.length >= NUMBER_HINTS) return;
 
     if (generationIntervalRef.current) {
       clearInterval(generationIntervalRef.current);
@@ -124,7 +138,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
       if (response && !responses.includes(response)) {
         setResponses((prev) => [...prev, response]);
       }
-    }, 1000);
+    }, 500);
     return () => {
       clearInterval(generationIntervalRef.current!);
     };
@@ -158,13 +172,17 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
               style={styles.headerModeText}
               onPress={changeMode}
             >
-              <Text style={{ color: ColorPalette.primary }}>
+              <Text
+                style={{ color: ColorPalette.primary, fontFamily: "Nunito" }}
+              >
                 {MODES[modeId].label}
               </Text>
             </TouchableOpacity>
           </View>
           <View style={styles.textInputWrapper}>
-            <Animated.View style={styles.textInputContainer}>
+            <Animated.View
+              style={[styles.textInputContainer, textInputAnimatedStyle]}
+            >
               <TextInput
                 autoCorrect={false}
                 autoComplete={"off"}
@@ -177,7 +195,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
                   llm.interrupt();
                   setUserInput(text);
                   setResponses([]);
-                  generatedHintRef.current = null;
+                  selectedHintRef.current = null;
                   if (generationIntervalRef.current) {
                     clearInterval(generationIntervalRef.current);
                     generationIntervalRef.current = null;
@@ -185,83 +203,35 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
                 }}
                 value={userInput}
               />
-              <TouchableOpacity
-                style={styles.copyButton}
+              <CopyButton
+                style={{
+                  padding: 20,
+                  position: "absolute",
+                  top: 0,
+                  right: 0,
+                }}
                 onPress={() => {
                   if (userInput) {
                     Clipboard.setString(userInput);
                   }
                 }}
-              >
-                <Icon name="copy-outline" size={20} color={"#fff"} />
-              </TouchableOpacity>
+              />
             </Animated.View>
           </View>
-          <View style={styles.chatResponseContainer}>
-            <View style={{ alignItems: "flex-end" }}>
-              {responses.map((hint, _) => (
-                <AnimatedTouchableOpacity
-                  text={hint}
-                  animate={generatedHintRef.current === hint}
-                  onPress={() => {
-                    setUserInput((prev) => prev.trim() + " " + hint);
-                    setResponses([]);
-                  }}
-                  onLongPress={async () => {
-                    if (responses.length < NUMBER_HINTS) return;
-                    generatedHintRef.current = hint;
-                    console.log(`Elaborate on "${generatedHintRef.current}"`);
-                    try {
-                      llm.interrupt();
-                      const response = await generateResponse(
-                        userInput.trim() + " " + hint
-                      );
-                      console.log(
-                        `Generated "${
-                          userInput.trim() + " " + hint
-                        }" + "${response}"`
-                      );
-                      if (response) {
-                        setResponses((prevResponses) =>
-                          prevResponses.map((res) =>
-                            res === hint ? hint + " " + response : res
-                          )
-                        );
-                      }
-                    } catch (error) {
-                      console.error("Error on long press:", error);
-                    } finally {
-                      generatedHintRef.current = null;
-                    }
-                  }}
-                />
-              ))}
-            </View>
-            {responses.length < NUMBER_HINTS && !generatedHintRef.current && (
-              <View
-                style={[styles.chatResponse, styles.chatResponseGenerating]}
-              >
-                <AnimatedDots
-                  size={6}
-                  numberDots={3}
-                  jumpHeight={4}
-                  delay={750}
-                  color={"#fff"}
-                />
-              </View>
-            )}
-          </View>
         </View>
-        {responses.length < NUMBER_HINTS && !generatedHintRef.current && (
-          <View style={styles.llamaContainer}>
-            <RunningLlama />
-          </View>
-        )}
         <ModeActionSheet
           visible={showModeModal}
           onClose={() => setShowModeModal(false)}
           onSelectMode={(id) => setModeId(id)}
           selectedModeIndex={modeId}
+        />
+        <KeyboardTouchableOpacity
+          texts={responses}
+          onPress={(text: string) => {
+            setUserInput((prev) => prev.trim() + " " + text);
+            setResponses([]);
+          }}
+          onLongPress={() => {}}
         />
       </View>
     </TouchableWithoutFeedback>
@@ -302,26 +272,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   headerText: {
-    fontFamily: "regular",
+    fontFamily: "Nunito",
+    fontWeight: 600,
     fontSize: 20,
     lineHeight: 28,
     textAlign: "center",
     color: ColorPalette.primary,
   },
   headerStyleText: {
-    fontFamily: "regular",
+    fontFamily: "Nunito",
     fontSize: 16,
     lineHeight: 28,
     color: ColorPalette.primary,
     marginRight: 10,
-  },
-  copyButton: {
-    padding: 15,
-    color: ColorPalette.blueLight,
-    borderRadius: 4,
-    position: "absolute",
-    top: 0,
-    right: 0,
+    marginTop: 4,
   },
   textInputWrapper: {
     width: "100%",
@@ -340,54 +304,13 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   textInput: {
-    fontFamily: "regular",
+    fontFamily: "Nunito",
     fontSize: 16,
     padding: 16,
-    maxHeight: 200,
+    height: 400,
+    maxHeight: 400,
     width: "90%",
     color: "#fff",
     alignSelf: "flex-start",
-  },
-  chatResponseContainer: {
-    alignSelf: "flex-end",
-    marginTop: 10,
-  },
-  chatResponse: {
-    borderRadius: 24,
-    minHeight: 50,
-    padding: 16,
-    marginVertical: 5,
-    justifyContent: "center",
-    alignItems: "center",
-    alignSelf: "flex-end",
-  },
-  chatResponseGenerating: {
-    backgroundColor: "#d1d6da",
-    height: 50,
-  },
-  chatResponseReady: {
-    fontFamily: "regular",
-    fontSize: 16,
-    minWidth: 100,
-    color: "#fff",
-    backgroundColor: ColorPalette.seaBlueDark,
-  },
-  llamaContainer: {
-    position: "absolute",
-    left: 0,
-    bottom: 0,
-  },
-  keyboardContainer: {
-    position: "absolute",
-    alignItems: "center",
-    bottom: 0,
-    width: "100%",
-    backgroundColor: "#d1d6da",
-  },
-  keyboardBox: {
-    justifyContent: "center",
-    alignItems: "center",
-    height: 40,
-    width: "100%",
   },
 });
