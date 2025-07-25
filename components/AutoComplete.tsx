@@ -2,12 +2,12 @@
 // TODO generowanie w pętli??
 // TODO rozwijanie do 2 zdan
 // TODO potestować modele
+// TODO lewy margines w nagłówku
 // TODO prompt
 
 import { ColorPalette } from "@/constants/Colors";
 import { MODES } from "@/constants/Modes";
 import { systemPrompt } from "@/constants/Prompt";
-import Clipboard from "@react-native-clipboard/clipboard";
 import { useIsFocused } from "@react-navigation/native";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -48,11 +48,11 @@ export default function LLMScreenWrapper({ mode }: LLMScreenWrapperProps) {
 
 function LLMScreen({ mode }: LLMScreenWrapperProps) {
   const generationIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const selectedHintRef = useRef<string | null>(null);
 
   const [userInput, setUserInput] = useState<string>("");
   const [modeId, setModeId] = useState<number>(mode);
   const [responses, setResponses] = useState<string[]>([]);
+  const [selectedResponse, setSelectedResponse] = useState<string | null>(null);
 
   const [showModeModal, setShowModeModal] = useState(false);
   const changeMode = () => setShowModeModal(true);
@@ -73,7 +73,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
   });
 
   function cleanResponse(response: string) {
-    console.log("\tBefore:", response);
+    // console.log("\tBefore:", response);
 
     const input = userInput.trim().toLowerCase();
     let clean = response.trim();
@@ -96,13 +96,13 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
       }
     }
 
-    console.log("\tMatched:", matchedPhrase);
+    // console.log("\tMatched:", matchedPhrase);
 
     const trimmedResponseWords = responseWords.slice(overlapIndex);
     const finalWords = trimmedResponseWords.slice(0, 3);
     const finalResponse = finalWords.join(" ");
 
-    console.log("\tAfter:", finalResponse);
+    // console.log("\tAfter:", finalResponse);
     return finalResponse;
   }
 
@@ -195,7 +195,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
                   llm.interrupt();
                   setUserInput(text);
                   setResponses([]);
-                  selectedHintRef.current = null;
+                  setSelectedResponse(null);
                   if (generationIntervalRef.current) {
                     clearInterval(generationIntervalRef.current);
                     generationIntervalRef.current = null;
@@ -210,11 +210,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
                   top: 0,
                   right: 0,
                 }}
-                onPress={() => {
-                  if (userInput) {
-                    Clipboard.setString(userInput);
-                  }
-                }}
+                value={userInput}
               />
             </Animated.View>
           </View>
@@ -227,11 +223,39 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
         />
         <KeyboardTouchableOpacity
           texts={responses}
+          selectedText={selectedResponse}
           onPress={(text: string) => {
+            setSelectedResponse(null);
             setUserInput((prev) => prev.trim() + " " + text);
             setResponses([]);
           }}
-          onLongPress={() => {}}
+          onLongPress={async (hint: string) => {
+            if (responses.length < NUMBER_HINTS || !hint) {
+              return;
+            }
+            if (hint !== selectedResponse) {
+              setSelectedResponse(hint);
+            }
+            console.log("Long press on", hint);
+            const n_words = hint.trim().split(/\s+/).filter(Boolean).length;
+            if (n_words > 10) {
+              console.log("Hint is already long");
+              return;
+            }
+            console.log("Generating more for", hint);
+            try {
+              llm.interrupt();
+              const response = await generateResponse(
+                userInput.trim() + " " + hint
+              );
+              console.log(
+                `Generated "${userInput.trim() + " " + hint}" + "${response}"`
+              );
+              setSelectedResponse(hint.trim() + " " + response?.trim());
+            } catch (error) {
+              console.error("Error on long press:", error);
+            }
+          }}
         />
       </View>
     </TouchableWithoutFeedback>

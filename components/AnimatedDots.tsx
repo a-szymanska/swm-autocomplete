@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -10,14 +10,6 @@ import Animated, {
 } from "react-native-reanimated";
 
 const PI2 = 2 * Math.PI;
-
-type AnimatedDotsProps = {
-  size: number;
-  numberDots: number;
-  jumpHeight: number;
-  delay: number;
-  color: string;
-};
 
 type AnimatedDotProps = {
   size: number;
@@ -67,12 +59,24 @@ const AnimatedDot = ({
   );
 };
 
+type AnimatedDotsProps = {
+  size: number;
+  gap?: number;
+  numberDots: number;
+  jumpHeight: number;
+  delay: number;
+  color: string;
+  style?: StyleProp<ViewStyle>;
+};
+
 export default function AnimatedDots({
   size,
+  gap = 8,
   numberDots,
   jumpHeight,
   delay,
   color,
+  style,
 }: AnimatedDotsProps) {
   const clock = useSharedValue(0);
 
@@ -88,7 +92,7 @@ export default function AnimatedDots({
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { gap }, style]}>
       {Array.from({ length: numberDots }).map((_, i) => {
         const phaseShift = (i / numberDots) * PI2;
         return (
@@ -110,9 +114,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: "row",
-    gap: 8,
     alignItems: "flex-end",
     justifyContent: "center",
-    padding: 10,
+    padding: 5,
   },
 });

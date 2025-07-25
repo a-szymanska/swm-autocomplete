@@ -69,11 +69,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "transparent",
     justifyContent: "flex-end",
+    alignItems: "center",
   },
   modal: {
     backgroundColor: "#fff",
     padding: 20,
     borderRadius: 20,
+    width: "98%",
   },
   title: {
     fontSize: 18,
