@@ -1,6 +1,5 @@
 // TODO generowanie w pętli??
 // TODO potestować modele
-// TODO lewy margines w nagłówku
 
 import { ColorPalette } from "@/constants/Colors";
 import {
@@ -58,6 +57,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
   const textInputAnimatedStyle = useAnimatedStyle(() => {
     const maxHeight = 600;
     const height = maxHeight - keyboard.height.value;
+    console.log("h=", height);
     return {
       height: height,
     };
@@ -210,6 +210,11 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
                 value={userInput}
               />
             </Animated.View>
+            {responses.length > 0 && (
+              <Text style={styles.instructionText}>
+                Accept hint on click, develop it on long click
+              </Text>
+            )}
           </View>
         </View>
         <ModeActionSheet
@@ -226,19 +231,21 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
             setUserInput((prev) => prev.trim() + " " + text);
             setResponses([]);
           }}
-          onLongPress={async (hint: string) => {
+          onFirstLongPress={async (hint: string) => {
             if (responses.length < NUMBER_HINTS || !hint) {
               return;
             }
             if (hint !== selectedResponse) {
               setSelectedResponse(hint);
             }
-            console.log("Long press on", hint);
+            console.log("First long press on", hint);
             const n_words = hint.trim().split(/\s+/).filter(Boolean).length;
             if (n_words > 10) {
               console.log("Hint is already long");
               return;
             }
+          }}
+          onLongPress={async (hint: string) => {
             console.log("Generating more for", hint);
             try {
               llm.interrupt();
@@ -284,6 +291,7 @@ const styles = StyleSheet.create({
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
+    alignSelf: "flex-start",
     marginTop: 100,
   },
   bottomContainer: {
@@ -306,6 +314,11 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     color: ColorPalette.primary,
     marginRight: 10,
+    marginTop: 4,
+  },
+  instructionText: {
+    fontFamily: "Nunito",
+    color: ColorPalette.primary,
     marginTop: 4,
   },
   textInputWrapper: {
