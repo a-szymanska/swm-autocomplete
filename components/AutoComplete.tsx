@@ -9,6 +9,7 @@ import {
 } from "@/constants/Model";
 import { MODES } from "@/constants/Modes";
 import { systemPrompt } from "@/constants/Prompt";
+import { cleanResponse } from "@/functions/CleanInput";
 import { useIsFocused } from "@react-navigation/native";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -69,40 +70,6 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
     tokenizerConfigSource,
   });
 
-  function cleanResponse(response: string) {
-    // console.log("\tBefore:", response);
-
-    const input = userInput.trim().toLowerCase();
-    let clean = response.trim();
-
-    if (!/[.?!]$/.test(input)) {
-      clean = clean.toLowerCase();
-    }
-
-    const inputWords = input.split(/\s+/);
-    const responseWords = clean.split(/\s+/);
-
-    let overlapIndex = 0;
-    let matchedPhrase = "";
-
-    for (let i = 0; i < responseWords.length; i++) {
-      const phrase = responseWords.slice(0, i + 1).join(" ");
-      if (input.endsWith(phrase)) {
-        overlapIndex = i + 1;
-        matchedPhrase = phrase;
-      }
-    }
-
-    // console.log("\tMatched:", matchedPhrase);
-
-    const trimmedResponseWords = responseWords.slice(overlapIndex);
-    const finalWords = trimmedResponseWords.slice(0, 3);
-    const finalResponse = finalWords.join(" ");
-
-    // console.log("\tAfter:", finalResponse);
-    return finalResponse;
-  }
-
   const generateResponse = async (input: string) => {
     input = input.trim();
     if (!input || !llm.isReady || llm.isGenerating) return null;
@@ -117,7 +84,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
         { role: "user", content: input },
       ]);
       console.log(`Hint for "${input}": "${llm.response}"`);
-      return cleanResponse(llm.response);
+      return cleanResponse(llm.response, userInput);
     } catch (error) {
       console.error("Generation error:", error);
     }
