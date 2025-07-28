@@ -3,11 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/react-native-executorch?color=00008B)](https://www.npmjs.com/package/react-native-executorch)
 [![react-native](https://img.shields.io/badge/react--native-0.79.5-61dafb.svg?logo=react)](https://github.com/facebook/react-native/releases/tag/v0.79.5)
 
-**React Native ExecuTorch** is a declarative way to run AI models in React Native on device, powered by **ExecuTorch** :rocket:. It offers out-of-the-box support for many LLMs, computer vision models, and many many more. Feel free to check them out on our [HuggingFace page](https://huggingface.co/software-mansion).
-
-**ExecuTorch** is a novel framework created by Meta that enables running AI models on devices such as mobile phones or microcontrollers.
-
-React Native ExecuTorch bridges the gap between React Native and native platform capabilities, allowing developers to run AI models locally on mobile devices with state-of-the-art performance, without requiring deep knowledge of native code or machine learning internals.
+This project is a mobile autocomplete app that provides real-time text suggestions. It is built with React Native and powered by LLM models running locally using ExecuTorch.
 
 ## Requirements
 
@@ -18,7 +14,7 @@ React Native ExecuTorch bridges the gap between React Native and native platform
 
 > The project uses React Native Executorch that supports only the New React Native architecture.
 
-## Usag
+## Usage
 
 To test the app, navigate to the project directory and install dependencies with:
 
@@ -36,7 +32,7 @@ npx expo run:ios
 
 ## Setup
 
-To select the LLM model used in the application, adjust the configuration in the file **/components/AutoComplete.tsx**:
+To select the LLM model used in the application, adjust the configuration in the file **/constants/Model.ts**:
 
 ```tsx
 import {
@@ -55,7 +51,7 @@ const llm = useLLM({
 
 ### Ready-to-use models
 
-https://docs.swmansion.com/react-native-executorch/docs/natural-language-processing/useLLM
+More details on available models and the requirements in the [documentation](https://docs.swmansion.com/react-native-executorch/docs/natural-language-processing/useLLM).
 
 ## License
 
