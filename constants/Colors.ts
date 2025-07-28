@@ -34,4 +34,5 @@ export const ColorPalette = {
   blueLight: "#C1C6E5",
   blueDark: "#6676AA",
   strongPrimary: "#020F3C",
+  lightGray: "#D1D6DA",
 };

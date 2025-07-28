@@ -1,11 +1,13 @@
-// TODO podpowiedzi na klawiaturze
 // TODO generowanie w pętli??
-// TODO rozwijanie do 2 zdan
 // TODO potestować modele
 // TODO lewy margines w nagłówku
-// TODO prompt
 
 import { ColorPalette } from "@/constants/Colors";
+import {
+  modelSource,
+  tokenizerConfigSource,
+  tokenizerSource,
+} from "@/constants/Model";
 import { MODES } from "@/constants/Modes";
 import { systemPrompt } from "@/constants/Prompt";
 import { useIsFocused } from "@react-navigation/native";
@@ -20,12 +22,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import {
-  LLAMA3_2_1B,
-  LLAMA3_2_1B_TOKENIZER,
-  LLAMA3_2_TOKENIZER_CONFIG,
-  useLLM,
-} from "react-native-executorch";
+import { useLLM } from "react-native-executorch";
 import Animated, {
   useAnimatedKeyboard,
   useAnimatedStyle,
@@ -67,9 +64,9 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
   });
 
   const llm = useLLM({
-    modelSource: LLAMA3_2_1B,
-    tokenizerSource: LLAMA3_2_1B_TOKENIZER,
-    tokenizerConfigSource: LLAMA3_2_TOKENIZER_CONFIG,
+    modelSource,
+    tokenizerSource,
+    tokenizerConfigSource,
   });
 
   function cleanResponse(response: string) {

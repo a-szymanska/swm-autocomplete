@@ -8,7 +8,6 @@ import Animated, {
 } from "react-native-reanimated";
 import AnimatedDots from "./AnimatedDots";
 
-// === Props Types ===
 export type KeyboardTouchableTextProps = {
   text: string | null;
   onPress: () => void;
@@ -19,10 +18,9 @@ export type KeyboardTouchableOpacityProps = {
   texts: string[];
   selectedText: string | null;
   onPress: (text: string) => void;
-  onLongPress: (text: string) => Promise<void> | void; // can be async
+  onLongPress: (text: string) => Promise<void> | void;
 };
 
-// === KeyboardTouchableText (for when selectedText is null) ===
 function KeyboardTouchableText({
   text,
   onPress,
@@ -52,7 +50,6 @@ function KeyboardTouchableText({
   );
 }
 
-// === AnimatedKeyboardTouchableText (for when selectedText is active) ===
 type AnimatedKeyboardTouchableTextProps = KeyboardTouchableTextProps & {
   generating: boolean;
 };
@@ -165,7 +162,6 @@ export default function KeyboardTouchableOpacity({
   );
 }
 
-// === Styles ===
 const styles = StyleSheet.create({
   keyboardContainer: {
     position: "absolute",
