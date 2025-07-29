@@ -1,6 +1,3 @@
-// TODO generowanie w pętli??
-// TODO potestować modele
-
 import { ColorPalette } from "@/constants/Colors";
 import {
   modelSource,
@@ -9,7 +6,7 @@ import {
 } from "@/constants/Model";
 import { MODES } from "@/constants/Modes";
 import { systemPrompt } from "@/constants/Prompt";
-import { cleanResponse } from "@/functions/CleanInput";
+import { parseResponse } from "@/functions/CleanResponse";
 import { useIsFocused } from "@react-navigation/native";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -22,7 +19,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { useLLM } from "react-native-executorch";
+import { Message, useLLM } from "react-native-executorch";
 import Animated, {
   useAnimatedKeyboard,
   useAnimatedStyle,
@@ -58,7 +55,6 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
   const textInputAnimatedStyle = useAnimatedStyle(() => {
     const maxHeight = 600;
     const height = maxHeight - keyboard.height.value;
-    console.log("h=", height);
     return {
       height: height,
     };
@@ -70,25 +66,66 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
     tokenizerConfigSource,
   });
 
-  const generateResponse = async (input: string) => {
+  const generateResponse = async (
+    input: string,
+    assistantInput: string | null = null,
+    num_responses = NUMBER_HINTS,
+    num_words = 3
+  ) => {
     input = input.trim();
-    if (!input || !llm.isReady || llm.isGenerating) return null;
-    console.log(`Generate hint for "${input}"`);
+    if (!input || !llm.isReady || llm.isGenerating) return "";
 
     try {
-      await llm.generate([
+      const messages: Message[] = [
         {
           role: "system",
           content: systemPrompt({ mode: MODES[modeId].label }),
         },
         { role: "user", content: input },
-      ]);
-      console.log(`Hint for "${input}": "${llm.response}"`);
-      return cleanResponse(llm.response, userInput);
+      ];
+      if (assistantInput) {
+        messages.push({ role: "assistant", content: assistantInput });
+      }
+      await llm.generate(messages);
+
+      console.log(llm.response);
+      return parseResponse(
+        llm.response,
+        assistantInput ? assistantInput : input,
+        num_responses,
+        num_words
+      );
     } catch (error) {
       console.error("Generation error:", error);
     }
   };
+
+  // useEffect(() => {
+  //   if (!userInput || !llm.isReady) return;
+
+  //   const timer = setTimeout(async () => {
+  //     setResponses([]);
+  //     setSelectedResponse(null);
+
+  //     const generatedResponses: string[] = [];
+  //     while (generatedResponses.length < 2) {
+  //       const response = await generateResponse(userInput);
+  //       console.log("Response:", response);
+  //       if (
+  //         response &&
+  //         response.trim().length > 0 &&
+  //         !generatedResponses.includes(response)
+  //       ) {
+  //         generatedResponses.push(response);
+  //         setResponses([...generatedResponses]);
+  //       }
+  //     }
+  //   }, 500);
+
+  //   return () => {
+  //     clearTimeout(timer);
+  //   };
+  // }, [userInput, llm.isReady]);
 
   useEffect(() => {
     if (!userInput || responses.length >= NUMBER_HINTS) return;
@@ -98,11 +135,11 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
     }
 
     generationIntervalRef.current = setInterval(async () => {
-      const response = await generateResponse(userInput);
-      if (response && !responses.includes(response)) {
-        setResponses((prev) => [...prev, response]);
+      const responses = await generateResponse(userInput);
+      if (responses) {
+        setResponses((prev) => [...prev, ...responses]);
       }
-    }, 500);
+    }, 250);
     return () => {
       clearInterval(generationIntervalRef.current!);
     };
@@ -198,31 +235,33 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
             setUserInput((prev) => prev.trim() + " " + text);
             setResponses([]);
           }}
-          onFirstLongPress={async (hint: string) => {
+          onLongPress={async (hint: string) => {
             if (responses.length < NUMBER_HINTS || !hint) {
               return;
             }
             if (hint !== selectedResponse) {
               setSelectedResponse(hint);
             }
-            console.log("First long press on", hint);
             const n_words = hint.trim().split(/\s+/).filter(Boolean).length;
-            if (n_words > 10) {
+            if (n_words > 15) {
               console.log("Hint is already long");
               return;
             }
-          }}
-          onLongPress={async (hint: string) => {
-            console.log("Generating more for", hint);
             try {
               llm.interrupt();
-              const response = await generateResponse(
-                userInput.trim() + " " + hint
+              const responses = await generateResponse(
+                userInput.trim(),
+                hint,
+                1 // number of responses to generate
               );
-              console.log(
-                `Generated "${userInput.trim() + " " + hint}" + "${response}"`
-              );
-              setSelectedResponse(hint.trim() + " " + response?.trim());
+              if (responses) {
+                console.log(
+                  `Generated "${userInput.trim() + " " + hint}" + "${
+                    responses[0]
+                  }"`
+                );
+                setSelectedResponse(hint.trim() + " " + responses[0]);
+              }
             } catch (error) {
               console.error("Error on long press:", error);
             }

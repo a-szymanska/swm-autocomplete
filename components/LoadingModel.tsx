@@ -13,8 +13,7 @@ export default function LoadingModel({ model }: ModelProps) {
     <View style={styles.container}>
       <Text style={styles.text}>
         {model.downloadProgress
-          ? `Loading the model $
-        {(model.downloadProgress * 100).toFixed(0)} %`
+          ? `Loading the model ${(model.downloadProgress * 100).toFixed(0)}%`
           : `Loading the model`}
       </Text>
       <View style={styles.llamaContainer}>

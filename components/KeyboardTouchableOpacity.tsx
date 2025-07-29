@@ -20,11 +20,16 @@ function KeyboardTouchableText({
   onPress,
   onLongPress,
 }: KeyboardTouchableTextProps) {
+  const [backgroundColor, setBackgroudnColor] = useState<string>(
+    ColorPalette.keyboardGray
+  );
   return (
     <TouchableOpacity
       onPress={onPress}
       onLongPress={onLongPress}
-      style={styles.halfBox}
+      onPressIn={() => setBackgroudnColor(ColorPalette.gray)}
+      onPressOut={() => setBackgroudnColor(ColorPalette.keyboardGray)}
+      style={[styles.halfBox, { backgroundColor }]}
       activeOpacity={1}
       disabled={!text}
     >
@@ -62,7 +67,7 @@ function AnimatedKeyboardTouchableText({
         onPressIn={() => setOnPressColor(ColorPalette.gray)}
         onPressOut={() => setOnPressColor(ColorPalette.keyboardGray)}
         activeOpacity={1}
-        style={styles.fullBox}
+        style={[styles.fullBox, { marginBottom: 5, marginTop: 10 }]}
       >
         <Text style={styles.fullBoxText}>{text}</Text>
       </TouchableOpacity>
@@ -76,7 +81,6 @@ export type KeyboardTouchableOpacityProps = {
   selectedText: string | null;
   onPress: (text: string) => void;
   onLongPress: (text: string) => Promise<void> | void;
-  onFirstLongPress: (text: string) => Promise<void> | void;
 };
 
 export default function KeyboardTouchableOpacity({
@@ -84,7 +88,6 @@ export default function KeyboardTouchableOpacity({
   selectedText,
   onPress,
   onLongPress,
-  onFirstLongPress,
 }: KeyboardTouchableOpacityProps) {
   const keyboard = useAnimatedKeyboard();
   const [keyboardHeight, setKeyboardHeight] = useState<number>(0);
@@ -121,28 +124,31 @@ export default function KeyboardTouchableOpacity({
 
   return (
     <Animated.View
-      style={[styles.keyboardContainer, textAnimatedStyle, { backgroundColor }]}
+      style={[
+        styles.keyboardContainer,
+        styles.fullBox,
+        textAnimatedStyle,
+        { backgroundColor },
+      ]}
     >
       {selectedText ? (
-        <View style={styles.fullBox}>
-          <AnimatedKeyboardTouchableText
-            text={selectedText}
-            onPress={() => onPress(selectedText)}
-            onLongPress={() => onLongPress(selectedText)}
-            setOnPressColor={setBackgroudnColor}
-          />
-        </View>
+        <AnimatedKeyboardTouchableText
+          text={selectedText}
+          onPress={() => onPress(selectedText)}
+          onLongPress={() => onLongPress(selectedText)}
+          setOnPressColor={setBackgroudnColor}
+        />
       ) : (
         <View style={styles.fullBox}>
           <KeyboardTouchableText
             text={texts[0] ?? null}
             onPress={() => onPress(texts[0])}
-            onLongPress={() => onFirstLongPress(texts[0])}
+            onLongPress={() => onLongPress(texts[0])}
           />
           <KeyboardTouchableText
             text={texts[1] ?? null}
             onPress={() => onPress(texts[1])}
-            onLongPress={() => onFirstLongPress(texts[0])}
+            onLongPress={() => onLongPress(texts[1])}
           />
         </View>
       )}
@@ -164,7 +170,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginVertical: 5,
+    marginTop: 5,
   },
   halfBox: {
     flex: 1,
@@ -176,5 +182,7 @@ const styles = StyleSheet.create({
   },
   fullBoxText: {
     width: "95%",
+    alignSelf: "center",
+    textAlign: "center",
   },
 });
