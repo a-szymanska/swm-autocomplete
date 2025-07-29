@@ -36,22 +36,19 @@ To select the LLM model used in the application, adjust the configuration in the
 
 ```tsx
 import {
-  useLLM,
   LLAMA3_2_1B,
   LLAMA3_2_TOKENIZER,
   LLAMA3_2_TOKENIZER_CONFIG,
 } from "react-native-executorch";
 
-const llm = useLLM({
-  modelSource: LLAMA3_2_1B,
-  tokenizerSource: LLAMA3_2_TOKENIZER,
-  tokenizerConfigSource: LLAMA3_2_TOKENIZER_CONFIG,
-});
+export const modelSource = LLAMA3_2_1B;
+export const tokenizerSource = LLAMA3_2_TOKENIZER;
+export const tokenizerConfigSource = LLAMA3_2_TOKENIZER_CONFIG;
 ```
 
 ### Ready-to-use models
 
-More details on available models and the requirements in the [documentation](https://docs.swmansion.com/react-native-executorch/docs/natural-language-processing/useLLM).
+More details on available models and the requirements in the [documentation](https://docs.swmansion.com/react-native-executorch/docs/natural-language-processing/useLLM#benchmarks).
 
 ## License
 
