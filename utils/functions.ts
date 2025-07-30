@@ -3,13 +3,8 @@ export function cleanResponse(
   input: string,
   num_words: number = 3
 ) {
-  console.log("Input:", input);
-  console.log("Response before:", response);
   input = input.trim().toLowerCase();
   response = response.trim().toLowerCase();
-  if (response.toLowerCase().startsWith("here are")) {
-    return "";
-  }
 
   input = input.replace(/[-_]/g, " ");
   response = response.replace(/[-_]/g, " ").replace(/[*]/g, "");
@@ -39,8 +34,6 @@ export function cleanResponse(
 
   const cleanResponseWords = responseWords.slice(idxMatched);
   const cleanResponse = cleanResponseWords.slice(0, num_words).join(" ");
-
-  console.log("Response after:", cleanResponse);
   return cleanResponse;
 }
 
@@ -50,21 +43,25 @@ export function parseResponse(
   num_responses = 2,
   num_words = 3
 ): string[] {
-  console.log("Parse:", jsonResponses);
-  const responses = JSON.parse(jsonResponses);
+  try {
+    const responses = JSON.parse(jsonResponses);
 
-  const parsedResponses: string[] = [];
-  let count = 0;
-  const n = responses.length;
-
-  for (let i = 0; i < n && count < num_responses; i++) {
-    const res = cleanResponse(responses[i], input, num_words);
-    console.log(`Response ${i}:`, res);
-    if (res && !parsedResponses.includes(res)) {
-      count++;
-      parsedResponses.push(res);
+    const parsedResponses: string[] = [];
+    let count = 0;
+    const n = responses.length;
+    for (let i = 0; i < n && count < num_responses; i++) {
+      const res = cleanResponse(responses[i], input, num_words);
+      if (res && !parsedResponses.includes(res)) {
+        count++;
+        parsedResponses.push(res);
+      }
     }
-  }
 
-  return parsedResponses;
+    return parsedResponses;
+  } catch (error) {
+    if (jsonResponses.includes("[") || jsonResponses.includes("]")) {
+      return [];
+    }
+    return [cleanResponse(jsonResponses, input, num_words)];
+  }
 }

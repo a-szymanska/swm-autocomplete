@@ -13,8 +13,8 @@ import { useColorScheme } from "@/hooks/useColorScheme";
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
-    SpaceMono: require("@/assets/fonts/SpaceMono-Regular.ttf"),
-    Nunito: require("@/assets/fonts/Nunito.ttf"),
+    AeonikRegular: require("@/assets/fonts/Aeonik-Regular.otf"),
+    AeonikMedium: require("@/assets/fonts/Aeonik-Medium.otf"),
   });
 
   if (!loaded) {

@@ -14,14 +14,14 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   onSelectMode: (index: number) => void;
-  selectedModeIndex: number;
+  selectedMode: string;
 };
 
 export default function ModeActionSheet({
   visible,
   onClose,
   onSelectMode,
-  selectedModeIndex,
+  selectedMode,
 }: Props) {
   return (
     <Modal
@@ -46,7 +46,7 @@ export default function ModeActionSheet({
                   <Text
                     style={[
                       styles.optionText,
-                      index === selectedModeIndex && styles.selectedText,
+                      mode.label === selectedMode && styles.selectedText,
                     ]}
                   >
                     {mode.label}
@@ -91,10 +91,12 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 16,
+    fontFamily: "AeonikRegular",
     color: "#333",
   },
   selectedText: {
     color: ColorPalette.primary,
+    fontFamily: "AeonikMedium",
     fontWeight: "bold",
   },
   cancelButton: {
@@ -103,6 +105,7 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: 16,
+    fontFamily: "AeonikMedium",
     color: ColorPalette.seaBlueDark,
     fontWeight: "bold",
   },

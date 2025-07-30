@@ -45,11 +45,6 @@ const styles = StyleSheet.create({
     top: 50,
     flexDirection: "row",
   },
-  helloText: {
-    fontFamily: "medium",
-    fontSize: 30,
-    color: ColorPalette.primary,
-  },
   icon: {
     alignItems: "center",
     justifyContent: "center",
@@ -60,7 +55,7 @@ const styles = StyleSheet.create({
     backgroundColor: ColorPalette.seaBlueLight,
   },
   bottomHelloText: {
-    fontFamily: "Nunito",
+    fontFamily: "AeonikRegular",
     fontSize: 20,
     lineHeight: 28,
     textAlign: "center",
@@ -80,6 +75,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#fff",
     fontSize: 16,
-    fontFamily: "Nunito",
+    fontFamily: "AeonikRegular",
   },
 });

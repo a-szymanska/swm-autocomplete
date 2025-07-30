@@ -17,11 +17,11 @@ Examples:
 Style: casual  
 Input: React Native is  
 Output: [
-  "super fun",
-  "great for hackers",
+  "a great tool for",
+  "easy to learn",
   "fast and easy",
-  "like magic",
-  "your best friend"
+  "used for apps",
+  "a popular choice"
 ]
 
 Style: tutorial  

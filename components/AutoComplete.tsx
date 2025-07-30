@@ -6,7 +6,7 @@ import {
 } from "@/constants/Model";
 import { MODES } from "@/constants/Modes";
 import { systemPrompt } from "@/constants/Prompt";
-import { parseResponse } from "@/functions/CleanResponse";
+import { parseResponse } from "@/utils/functions";
 import { useIsFocused } from "@react-navigation/native";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -26,7 +26,7 @@ import Animated, {
 } from "react-native-reanimated";
 import ModeActionSheet from "./ActionSheet";
 import CopyButton from "./CopyButton";
-import KeyboardTouchableOpacity from "./KeyboardTouchableOpacity";
+import KeyboardTouchableOpacity from "./KeyboardTouchable";
 import LoadingModel from "./LoadingModel";
 
 type LLMScreenWrapperProps = {
@@ -53,7 +53,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
 
   const keyboard = useAnimatedKeyboard();
   const textInputAnimatedStyle = useAnimatedStyle(() => {
-    const maxHeight = 600;
+    const maxHeight = 525;
     const height = maxHeight - keyboard.height.value;
     return {
       height: height,
@@ -87,45 +87,18 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
         messages.push({ role: "assistant", content: assistantInput });
       }
       await llm.generate(messages);
-
-      console.log(llm.response);
-      return parseResponse(
+      const responses = parseResponse(
         llm.response,
         assistantInput ? assistantInput : input,
         num_responses,
         num_words
       );
+      return responses;
     } catch (error) {
       console.error("Generation error:", error);
+      return [];
     }
   };
-
-  // useEffect(() => {
-  //   if (!userInput || !llm.isReady) return;
-
-  //   const timer = setTimeout(async () => {
-  //     setResponses([]);
-  //     setSelectedResponse(null);
-
-  //     const generatedResponses: string[] = [];
-  //     while (generatedResponses.length < 2) {
-  //       const response = await generateResponse(userInput);
-  //       console.log("Response:", response);
-  //       if (
-  //         response &&
-  //         response.trim().length > 0 &&
-  //         !generatedResponses.includes(response)
-  //       ) {
-  //         generatedResponses.push(response);
-  //         setResponses([...generatedResponses]);
-  //       }
-  //     }
-  //   }, 500);
-
-  //   return () => {
-  //     clearTimeout(timer);
-  //   };
-  // }, [userInput, llm.isReady]);
 
   useEffect(() => {
     if (!userInput || responses.length >= NUMBER_HINTS) return;
@@ -153,7 +126,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
         <View style={styles.bottomContainer}>
           <View style={styles.headerContainer}>
             <Image
-              source={require("@/assets/images/llama_portrait.png")}
+              source={require("@/assets/images/llama_head.png")}
               style={styles.icon}
             />
             <Text style={styles.headerText}>
@@ -174,7 +147,10 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
               onPress={changeMode}
             >
               <Text
-                style={{ color: ColorPalette.primary, fontFamily: "Nunito" }}
+                style={{
+                  color: ColorPalette.primary,
+                  fontFamily: "AeonikRegular",
+                }}
               >
                 {MODES[modeId].label}
               </Text>
@@ -216,7 +192,9 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
             </Animated.View>
             {responses.length > 0 && (
               <Text style={styles.instructionText}>
-                Accept hint on click, develop it on long click
+                {selectedResponse && selectedResponse.split(/\s+/).length > 15
+                  ? "The hint is already long - click to accept it or start typing."
+                  : "Accept hint on click, develop it on long click"}
               </Text>
             )}
           </View>
@@ -225,7 +203,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
           visible={showModeModal}
           onClose={() => setShowModeModal(false)}
           onSelectMode={(id) => setModeId(id)}
-          selectedModeIndex={modeId}
+          selectedMode={MODES[modeId].label}
         />
         <KeyboardTouchableOpacity
           texts={responses}
@@ -244,7 +222,7 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
             }
             const n_words = hint.trim().split(/\s+/).filter(Boolean).length;
             if (n_words > 15) {
-              console.log("Hint is already long");
+              // Limit for length of hint
               return;
             }
             try {
@@ -252,14 +230,9 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
               const responses = await generateResponse(
                 userInput.trim(),
                 hint,
-                1 // number of responses to generate
+                1 // Generate 1 hint
               );
               if (responses) {
-                console.log(
-                  `Generated "${userInput.trim() + " " + hint}" + "${
-                    responses[0]
-                  }"`
-                );
                 setSelectedResponse(hint.trim() + " " + responses[0]);
               }
             } catch (error) {
@@ -307,7 +280,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   headerText: {
-    fontFamily: "Nunito",
+    fontFamily: "AeonikRegular",
     fontWeight: 600,
     fontSize: 20,
     lineHeight: 28,
@@ -315,7 +288,7 @@ const styles = StyleSheet.create({
     color: ColorPalette.primary,
   },
   headerStyleText: {
-    fontFamily: "Nunito",
+    fontFamily: "AeonikRegular",
     fontSize: 16,
     lineHeight: 28,
     color: ColorPalette.primary,
@@ -323,7 +296,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   instructionText: {
-    fontFamily: "Nunito",
+    fontFamily: "AeonikRegular",
     color: ColorPalette.primary,
     marginTop: 4,
   },
@@ -344,7 +317,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   textInput: {
-    fontFamily: "Nunito",
+    fontFamily: "AeonikRegular",
     fontSize: 16,
     padding: 16,
     height: 400,
