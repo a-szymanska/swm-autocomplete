@@ -7,7 +7,10 @@ export function cleanResponse(
   response = response.trim().toLowerCase();
 
   input = input.replace(/[-_]/g, " ");
-  response = response.replace(/[-_]/g, " ").replace(/[*]/g, "");
+  response = response
+    .replace(/[-_]/g, " ")
+    .replace(/[*]/g, "")
+    .replace(/null/g, "");
 
   const inputWords = input.split(/\s+/);
   let responseWords = response.split(/\s+/);

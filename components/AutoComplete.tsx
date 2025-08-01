@@ -6,7 +6,7 @@ import {
 } from "@/constants/Model";
 import { MODES } from "@/constants/Modes";
 import { systemPrompt } from "@/constants/Prompt";
-import { parseResponse } from "@/utils/functions";
+import { cleanResponse, parseResponse } from "@/utils/functions";
 import { useIsFocused } from "@react-navigation/native";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -69,36 +69,35 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
   const generateResponse = async (
     input: string,
     assistantInput: string | null = null,
-    num_responses = NUMBER_HINTS,
     num_words = 3
   ) => {
     input = input.trim();
     if (!input || !llm.isReady || llm.isGenerating) return "";
 
     try {
-      const messages: Message[] = [
-        {
-          role: "system",
-          content: systemPrompt({ mode: MODES[modeId].label }),
-        },
-        { role: "user", content: input },
-      ];
-      if (assistantInput) {
-        messages.push({ role: "assistant", content: assistantInput });
-      }
-      await llm.generate(messages);
-      const responses = parseResponse(
+      llm.deleteMessage(0);
+      await llm.sendMessage(input + assistantInput);
+      const response = cleanResponse(
         llm.response,
         assistantInput ? assistantInput : input,
-        num_responses,
         num_words
       );
-      return responses;
+      return response;
     } catch (error) {
       console.error("Generation error:", error);
-      return [];
+      return null;
     }
   };
+
+  const { configure } = llm;
+  useEffect(() => {
+    const prompt = systemPrompt({ mode: MODES[modeId].label });
+    configure({
+      chatConfig: {
+        systemPrompt: prompt,
+      },
+    });
+  }, [configure, modeId]);
 
   useEffect(() => {
     if (!userInput || responses.length >= NUMBER_HINTS) return;
@@ -108,9 +107,9 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
     }
 
     generationIntervalRef.current = setInterval(async () => {
-      const responses = await generateResponse(userInput);
-      if (responses) {
-        setResponses((prev) => [...prev, ...responses]);
+      const response = await generateResponse(userInput);
+      if (response && !responses.includes(response)) {
+        setResponses((prev) => [...prev, response]);
       }
     }, 250);
     return () => {
@@ -227,13 +226,9 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
             }
             try {
               llm.interrupt();
-              const responses = await generateResponse(
-                userInput.trim(),
-                hint,
-                1 // Generate 1 hint
-              );
-              if (responses) {
-                setSelectedResponse(hint.trim() + " " + responses[0]);
+              const response = await generateResponse(userInput.trim(), hint);
+              if (response) {
+                setSelectedResponse(hint.trim() + " " + response);
               }
             } catch (error) {
               console.error("Error on long press:", error);
