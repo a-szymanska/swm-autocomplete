@@ -66,6 +66,16 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
     tokenizerConfigSource,
   });
 
+  const { configure } = llm;
+  useEffect(() => {
+    const prompt = systemPrompt({ mode: MODES[modeId].label });
+    configure({
+      chatConfig: {
+        systemPrompt: prompt,
+      },
+    });
+  }, [configure, modeId]);
+
   const generateResponse = async (
     input: string,
     assistantInput: string | null = null,
@@ -88,16 +98,6 @@ function LLMScreen({ mode }: LLMScreenWrapperProps) {
       return null;
     }
   };
-
-  const { configure } = llm;
-  useEffect(() => {
-    const prompt = systemPrompt({ mode: MODES[modeId].label });
-    configure({
-      chatConfig: {
-        systemPrompt: prompt,
-      },
-    });
-  }, [configure, modeId]);
 
   useEffect(() => {
     if (!userInput || responses.length >= NUMBER_HINTS) return;
