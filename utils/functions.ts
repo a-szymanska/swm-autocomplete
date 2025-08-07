@@ -10,6 +10,7 @@ export function cleanResponse(
   response = response
     .replace(/[-_]/g, " ")
     .replace(/[*]/g, "")
+    .replace(/["]/g, "")
     .replace(/null/g, "");
 
   const inputWords = input.split(/\s+/);
